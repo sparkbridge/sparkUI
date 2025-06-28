@@ -17,7 +17,15 @@
 
         <div class="plugin-footer">
             <el-button text bg :icon="Promotion" @click.stop="goTo(plugin.githubUrl)">GitHub</el-button>
-            <el-button type="primary" :icon="Download" @click.stop="onDownloadClick">下载</el-button>
+
+            <el-button v-if="plugin.status === 'installed'" type="danger" plain :icon="Delete"
+                @click.stop="$emit('uninstall', plugin)">
+                卸载
+            </el-button>
+            <el-button v-else type="primary" :icon="Download" @click.stop="$emit('download', plugin)"
+                :loading="isInstalling">
+                {{ isInstalling ? '正在安装...' : '下载' }}
+            </el-button>
         </div>
     </el-card>
 </template>
@@ -26,20 +34,15 @@
 import { Promotion, Download } from '@element-plus/icons-vue';
 
 const props = defineProps({
-    plugin: {
-        type: Object,
-        required: true,
-    }
+    plugin: { type: Object, required: true },
+    // 【新增】接收一个“正在安装”的布尔状态
+    isInstalling: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['download']);
+const emit = defineEmits(['download', 'uninstall']);
 
 const goTo = (url) => {
     window.open(url, '_blank');
-};
-
-const onDownloadClick = () => {
-    emit('download', props.plugin);
 };
 
 const getTagType = (tag) => {

@@ -1,50 +1,58 @@
 <template>
     <div class="log-page-container">
-        <div class="page-header">
-            <h1>系统日志</h1>
-            <div class="controls">
-                <el-date-picker v-model="selectedDate" type="date" placeholder="选择日志日期" format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD" :disabled-date="disabledDate" @change="handleDateChange"
-                    style="margin-right: 15px;" />
-                <el-radio-group v-model="filterLevel" size="small">
-                    <el-radio-button label="All">全部</el-radio-button>
-                    <el-radio-button label="INFO">信息</el-radio-button>
-                    <el-radio-button label="WARN">警告</el-radio-button>
-                    <el-radio-button label="ERROR">错误</el-radio-button>
-                </el-radio-group>
-
-            </div>
+      <div class="page-header">
+        <h1>系统日志</h1>
+        <div class="controls">
+          <el-date-picker
+            v-model="selectedDate"
+            type="date"
+            placeholder="选择日志日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            :disabled-date="disabledDate"
+            @change="handleDateChange"
+            style="margin-right: 15px;"
+          />
+          <el-radio-group v-model="filterLevel" size="small">
+            <el-radio-button label="All">全部</el-radio-button>
+            <el-radio-button label="INFO">信息</el-radio-button>
+            <el-radio-button label="WARN">警告</el-radio-button>
+            <el-radio-button label="ERROR">错误</el-radio-button>
+          </el-radio-group>
         </div>
-
-        <div v-loading="loading">
-            <el-table :data="filteredLogs" stripe style="width: 100%" v-if="!isMobile">
-                <el-table-column prop="timestamp" label="时间" width="200"></el-table-column>
-                <el-table-column prop="level" label="级别" width="120">
-                    <template #default="{ row }">
-                        <el-tag :type="getTagType(row.level)">{{ row.level }}</el-tag>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="message" label="信息"></el-table-column>
-            </el-table>
-
-            <div v-else class="mobile-log-list">
-                <el-card v-for="(log, index) in filteredLogs" :key="index" class="log-card">
-                    <div class="log-item"><span class="log-label">时间:</span><span>{{ log.timestamp }}</span></div>
-                    <div class="log-item"><span class="log-label">级别:</span><el-tag :type="getTagType(log.level)"
-                            size="small">{{
-                            log.level }}</el-tag></div>
-                    <div class="log-item message"><span class="log-label">信息:</span>
-                        <p>{{ log.message }}</p>
-                    </div>
-                </el-card>
-            </div>
-
-            <el-empty v-if="logContent.length > 0 && filteredLogs.length === 0" description="当前级别下无日志"></el-empty>
-            <el-empty v-if="logContent.length === 0 && !loading" description="暂无日志内容"></el-empty>
+      </div>
+  
+      <div v-loading="loading">
+        <el-table :data="filteredLogs" stripe style="width: 100%" v-if="!isMobile">
+          <el-table-column prop="timestamp" label="时间" width="200"></el-table-column>
+          <el-table-column prop="module" label="模块" width="150">
+             <template #default="{ row }">
+                <span class="module-text">{{ row.module }}</span>
+             </template>
+          </el-table-column>
+          <el-table-column prop="level" label="级别" width="120">
+            <template #default="{ row }">
+              <el-tag :type="getTagType(row.level)">{{ row.level }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="message" label="信息"></el-table-column>
+        </el-table>
+  
+        <div v-else class="mobile-log-list">
+          <el-card v-for="(log, index) in filteredLogs" :key="index" class="log-card">
+            <div class="log-item"><span class="log-label">时间:</span><span>{{ log.timestamp }}</span></div>
+            <div class="log-item"><span class="log-label">模块:</span><span class="module-text">{{ log.module }}</span></div>
+            <div class="log-item"><span class="log-label">级别:</span><el-tag :type="getTagType(log.level)" size="small">{{ log.level }}</el-tag></div>
+            <div class="log-item message"><span class="log-label">信息:</span><p>{{ log.message }}</p></div>
+          </el-card>
         </div>
-
+  
+        <el-empty v-if="logContent.length > 0 && filteredLogs.length === 0" description="当前级别下无日志"></el-empty>
+        <el-empty v-if="logContent.length === 0 && !loading" description="暂无日志内容"></el-empty>
+      </div>
     </div>
-</template>
+  </template>
+  
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
@@ -145,6 +153,11 @@ onMounted(async () => {
     align-items: center;
     flex-wrap: wrap;
     gap: 15px;
+}
+/* 【新增】为模块文本添加一点样式 */
+.module-text {
+    font-weight: bold;
+    color: #303133;
 }
 
 /* --- 移动端下的卡片列表样式 --- */

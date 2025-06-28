@@ -8,6 +8,8 @@ import SystemLogs from '../views/SystemLogs.vue'
 import Chat from '../views/Chat.vue'
 import Showcase from '../views/ShowCase.vue'; 
 import PluginMarket from '../views/PluginMarket.vue'; // 引入新页面
+import RulesEngine from '../views/RulesEngine.vue';
+import NotFound from '../views/NotFound.vue'
 
 const routes = [
     // 登录和注册页面是独立的，不使用主布局
@@ -57,13 +59,27 @@ const routes = [
                 path: 'market',
                 name: 'PluginMarket',
                 component: PluginMarket
+              },
+            {
+                path: 'rules-engine',
+                name: 'RulesEngine',
+                component: RulesEngine
               }
         ]
     },
     // 兜底路由保持不变
+    // {
+    //     path: '/:pathMatch(.*)*',
+    //     redirect: '/login'
+    // }
+    // ,
+
+    // 【重要修改】将通配符路由指向 NotFound 组件
+    // 这个路由必须在路由列表的【最后】
     {
-        path: '/:pathMatch(.*)*',
-        redirect: '/login'
+        path: '/:pathMatch(.*)*', // 匹配所有未匹配到的路径
+        name: 'NotFound',
+        component: NotFound
     }
 ]
 

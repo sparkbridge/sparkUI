@@ -31,6 +31,12 @@
             </el-icon>
             <span>虚拟聊天</span>
         </el-menu-item>
+        <el-menu-item index="/rules-engine">
+            <el-icon>
+                <MagicStick />
+            </el-icon>
+            <span>规则引擎</span>
+        </el-menu-item>
         <el-menu-item index="/showcase">
             <el-icon>
                 <Trophy />
@@ -41,7 +47,7 @@
 </template>
 
 <script setup>
-import { Setting, User, Document, ChatDotRound, Trophy ,Shop } from '@element-plus/icons-vue';
+import { Setting, User, Document, ChatDotRound, Trophy, Shop, MagicStick } from '@element-plus/icons-vue';
 
 const emit = defineEmits(['select']);
 
