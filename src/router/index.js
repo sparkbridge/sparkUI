@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '../layouts/layout.vue' // 引入主布局组件
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
-import Dashboard from '../views/Dashboard.vue'
+import Dashboard from '../views/DashBoard.vue'
 import UserManagement from '../views/UserManagement.vue'
 import SystemLogs from '../views/SystemLogs.vue'
 import Chat from '../views/Chat.vue'
