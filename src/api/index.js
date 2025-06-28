@@ -25,7 +25,8 @@ export const loginUser = (credentials) => {
         setTimeout(() => {
             resolve({
                 data:{
-                    status : 200
+                    code : 0,
+                    data: {token: '1234567890'}
                 }
             });
         }, 200);

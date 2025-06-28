@@ -2,7 +2,9 @@
     <div class="login-container">
         <el-card class="login-card">
             <template #header>
-                <div class="card-header"><span>系统登录</span></div>
+                <div class="card-header">
+                    <span>系统登录</span>
+                </div>
             </template>
             <el-form ref="loginFormRef" :model="loginForm" label-width="80px" label-position="right">
                 <el-form-item label="用户ID">
@@ -25,10 +27,11 @@
 </template>
 
 <script setup>
+// script 部分的代码无需改动
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { loginUser } from '../api'; // 引入API
+import { loginUser } from '../api';
 
 const router = useRouter();
 const loading = ref(false);
@@ -44,26 +47,20 @@ const handleLogin = async () => {
     }
     loading.value = true;
     try {
-        // 【重要修改】使用浏览器内置的 btoa() 函数进行 Base64 编码
         const base64Password = btoa(loginForm.password);
-
-        // 发送包含 base64 密码的数据
         const loginResponse = await loginUser({
             id: loginForm.id,
             password: base64Password,
         });
-
-        if (loginResponse.data.status === 200) {
+        if (loginResponse.data.code === 0) {
             ElMessage.success('登录成功！');
-            localStorage.setItem('user-token','123')// loginResponse.data.data.token);
-            // console.log('条件满足，即将执行跳转到 /dashboard');
+            localStorage.setItem('user-token', loginResponse.data.data.token);
             router.push('/dashboard');
         } else {
             ElMessage.error(loginResponse.data.message || '登录失败');
         }
     } catch (error) {
-        console.error('登录流程出错:', error);
-        ElMessage.error(error.response?.data?.message || error.message || '登录请求失败');
+        ElMessage.error(error.response?.data?.message || '登录请求失败');
     } finally {
         loading.value = false;
     }
@@ -81,10 +78,19 @@ const goToRegister = () => {
     align-items: center;
     height: 100vh;
     background-color: #f0f2f5;
+    padding: 0 20px;
+    /* 在屏幕两边留出一些边距 */
 }
 
+/* 【重要修改】
+    1. 使用 width: 90% 让卡片宽度自适应屏幕。
+    2. 使用 max-width: 450px 限制在PC端不要过宽。
+    3. 添加 box-sizing: border-box 是一个好习惯。
+  */
 .login-card {
-    width: 450px;
+    width: 90%;
+    max-width: 450px;
+    box-sizing: border-box;
 }
 
 .bottom-link {

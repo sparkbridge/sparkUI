@@ -119,24 +119,7 @@ onMounted(async () => {
     }
 });
 
-// 【新增】处理数组输入框内容变化和校验的函数
-const handleArrayInputChange = (item, newValue) => {
-    // 正则表达式：只允许数字、逗号和空白字符
-    const regex = /^[\d,\s]*$/;
-    if (regex.test(newValue)) {
-        // 如果校验通过，更新值
-        item.value = newValue;
-        // 注意：我们之前的实时更新 handleValueChange 是绑定在 @change 事件上的
-        // 因为这里我们接管了 @change，所以需要手动调用它来触发API更新
-        // (为了简化，这里假设实时更新是必要的，如果不是，可以移除下面这行)
-        // handleValueChange(currentItemInfo.value.categoryName, currentItemInfo.value.key, item);
-    } else {
-        // 如果校验失败，给出错误提示
-        ElMessage.error('输入无效，该字段只能包含数字和逗号！');
-        // 可选：将值重置为之前的值，但这需要更复杂的状态管理
-        // 这里我们选择不清空，让用户可以修正他们的输入
-    }
-};
+
 
 const formRules = reactive({}); // 【重要】定义 formRules，解决警告问题
 

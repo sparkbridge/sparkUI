@@ -28,6 +28,7 @@
 </template>
 
 <script setup>
+// script 部分的代码无需改动
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -66,10 +67,14 @@ const goToLogin = () => {
     align-items: center;
     height: 100vh;
     background-color: #f0f2f5;
+    padding: 0 20px;
 }
 
+/* 【重要修改】应用与登录页相同的响应式样式 */
 .register-card {
-    width: 450px;
+    width: 90%;
+    max-width: 450px;
+    box-sizing: border-box;
 }
 
 .bottom-link {
