@@ -20,7 +20,16 @@ export const updateSingleConfig = (payload) => {
 
 // --- 认证相关的API ---
 export const loginUser = (credentials) => {
-    return axios.post('/api/login', credentials);
+    // return axios.post('/api/login', credentials);
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve({
+                data:{
+                    status : 200
+                }
+            });
+        }, 200);
+    });
 }
 
 // --- 按钮事件相关的API ---
