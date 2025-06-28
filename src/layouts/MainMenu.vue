@@ -43,20 +43,66 @@
             </el-icon>
             <span>关于我们</span>
         </el-menu-item>
+        <div v-if="isMobile" class="logout-menu-item" @click="handleLogoutClick">
+            <el-icon>
+                <SwitchButton />
+            </el-icon>
+            <span>退出登录</span>
+        </div>
     </el-menu>
 </template>
 
 <script setup>
-import { Setting, User, Document, ChatDotRound, Trophy, Shop, MagicStick } from '@element-plus/icons-vue';
+import { Setting, User, Document, ChatDotRound, Trophy, Shop, MagicStick,SwitchButton } from '@element-plus/icons-vue';
 
 const emit = defineEmits(['select']);
+
+// 【新增】接收 isMobile prop
+const props = defineProps({
+    isMobile: {
+        type: Boolean,
+        default: false,
+    }
+});
 
 const handleSelect = () => {
     emit('select');
 };
+
+// 【新增】当点击退出登录时，向父组件发出 logout 事件
+const handleLogoutClick = () => {
+    emit('logout');
+};
 </script>
 
 <style scoped>
+/* 【重要修改】使用 flex 布局来分隔菜单项和底部的退出按钮 */
+.main-menu-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    border-right: none;
+}
+/* 【新增】移动端退出登录按钮的样式 */
+.logout-menu-item {
+    display: flex;
+    align-items: center;
+    height: 56px;
+    line-height: 56px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.logout-menu-item:hover {
+    background-color: #46586d;
+}
+
+.logout-menu-item .el-icon {
+    margin-right: 5px;
+}
 .el-menu {
     border-right: none;
     /* 去掉菜单右侧的边框 */
@@ -65,14 +111,14 @@ const handleSelect = () => {
 /* 【重要修改】
     设置菜单项在 hover（鼠标悬停）和 is-active（被选中）时的背景色 
   */
+
+
 .el-menu-item:hover {
     background-color: #46586d;
-    /* 一个稍亮的蓝色 */
 }
 
 .el-menu-item.is-active {
     background-color: #409EFF;
-    /* 使用 Element Plus 的主蓝色作为高亮色 */
     color: #fff;
 }
 </style>

@@ -2,29 +2,25 @@
     <div class="dashboard-container">
         <el-container>
             <el-header class="header">
-                <h1>配置管理面板</h1>
-                <div>
-                    <!-- <el-button @click="handleLogout" type="danger">退出登录</el-button> -->
-                    <el-button type="primary" @click="saveConfig" :loading="isSaving" style="margin-left: 12px;">
-                        导出为JSON
-                    </el-button>
-                </div>
+                <h1>配置管理</h1>
+                <el-button type="primary" @click="exportConfig" :loading="isSaving">导出为JSON</el-button>
             </el-header>
 
-            <el-main v-loading="loading">
-                <el-form label-position="top" v-if="configData">
-                    <el-row :gutter="20">
-                        <el-col :md="12" :sm="24" :xs="24" v-for="(category, categoryName) in configData"
-                            :key="categoryName" style="margin-bottom: 20px;">
-                            <el-card>
-                                <template #header>
-                                    <div class="card-header"><span>{{ categoryName }}</span></div>
-                                </template>
-                                <el-form-item v-for="(item, key) in category" :key="key" :label="item.desc">
+            <el-form label-position="top" class="dashboard-form" ref="formRef" :model="configData" :rules="formRules">
+                <el-row :gutter="20" v-if="configData">
+                    <el-col :md="12" :sm="24" :xs="24" v-for="(category, categoryName) in configData"
+                        :key="categoryName" style="margin-bottom: 20px;">
+                        <el-card>
+                            <template #header>
+                                <div class="card-header"><span>{{ categoryName }}</span></div>
+                            </template>
+                            <div v-for="(item, key) in category" :key="key">
+                                <el-form-item :label="item.desc" :prop="`${categoryName}.${key}.value`">
 
                                     <div v-if="item.type === CONFIG_TYPE.EditArray"
                                         style="display: flex; align-items: center; width: 100%;">
-                                        <el-input :model-value="item.value" :placeholder="item.desc" readonly>
+                                        <el-input v-model="item.value" placeholder="请输入用逗号分隔的值"
+                                            @change="handleValueChange(categoryName, key, item)">
                                             <template #append>
                                                 <el-button @click="openArrayEditor(categoryName, key, item)"
                                                     :icon="Edit" />
@@ -36,52 +32,35 @@
                                         @change="handleValueChange(categoryName, key, item)" />
                                     <el-select v-else-if="item.type === CONFIG_TYPE.Choosing" v-model="item.value"
                                         @change="handleValueChange(categoryName, key, item)" placeholder="请选择"
-                                        style="width: 100%;">
-                                        <el-option v-for="(option, index) in item.options" :key="index" :label="option"
-                                            :value="String(index)" />
-                                    </el-select>
+                                        style="width: 100%;"><el-option v-for="(option, index) in item.options"
+                                            :key="index" :label="option" :value="String(index)" /></el-select>
                                     <el-input v-else-if="item.type === CONFIG_TYPE.text" v-model="item.value"
                                         @change="handleValueChange(categoryName, key, item)" :placeholder="item.desc" />
                                     <el-input-number v-else-if="item.type === CONFIG_TYPE.number" v-model="item.value"
                                         @change="handleValueChange(categoryName, key, item)" :controls="false"
                                         style="width: 100%;" />
+
                                     <el-button v-else-if="item.type === CONFIG_TYPE.buttom" type="primary" plain
                                         @click="handleAction(categoryName, key, item)">{{ item.desc }}</el-button>
                                     <el-input v-else v-model="item.value"
                                         @change="handleValueChange(categoryName, key, item)"
                                         :placeholder="'未知类型: ' + item.type" />
                                 </el-form-item>
-                            </el-card>
-                        </el-col>
-                    </el-row>
-                </el-form>
-            </el-main>
+                            </div>
+                        </el-card>
+                    </el-col>
+                </el-row>
+            </el-form>
+
         </el-container>
 
         <el-dialog v-model="dialogVisible" :title="`编辑 - ${currentItemInfo?.item.desc}`" width="500px">
-            <div v-for="(val, index) in tempArray" :key="index" style="margin-bottom: 10px;">
-                <el-input v-model="tempArray[index]" placeholder="请输入内容">
-                    <template #append>
-                        <el-button @click="deleteItem(index)" type="danger" :icon="Delete" />
-                    </template>
-                </el-input>
-            </div>
-
-            <el-button @click="addItem" type="primary" plain :icon="Plus" style="width: 100%">新增一项</el-button>
-
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="dialogVisible = false">取消</el-button>
-                    <el-button type="primary" @click="confirmEdit">确定</el-button>
-                </span>
-            </template>
         </el-dialog>
-
     </div>
 </template>
-  
+
   <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted ,reactive,} from 'vue';
 import { useRouter } from 'vue-router';
 import { getGlobalConfig, updateSingleConfig, triggerButtonClickEvent } from '../api';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -139,6 +118,28 @@ onMounted(async () => {
         loading.value = false;
     }
 });
+
+// 【新增】处理数组输入框内容变化和校验的函数
+const handleArrayInputChange = (item, newValue) => {
+    // 正则表达式：只允许数字、逗号和空白字符
+    const regex = /^[\d,\s]*$/;
+    if (regex.test(newValue)) {
+        // 如果校验通过，更新值
+        item.value = newValue;
+        // 注意：我们之前的实时更新 handleValueChange 是绑定在 @change 事件上的
+        // 因为这里我们接管了 @change，所以需要手动调用它来触发API更新
+        // (为了简化，这里假设实时更新是必要的，如果不是，可以移除下面这行)
+        // handleValueChange(currentItemInfo.value.categoryName, currentItemInfo.value.key, item);
+    } else {
+        // 如果校验失败，给出错误提示
+        ElMessage.error('输入无效，该字段只能包含数字和逗号！');
+        // 可选：将值重置为之前的值，但这需要更复杂的状态管理
+        // 这里我们选择不清空，让用户可以修正他们的输入
+    }
+};
+
+const formRules = reactive({}); // 【重要】定义 formRules，解决警告问题
+
 
 const openArrayEditor = (categoryName, key, item) => {
     // 1. 存储当前操作项的信息，方便后续保存
@@ -353,6 +354,10 @@ const saveConfig = () => {
 
 .el-card {
     height: 100%;
+}
+
+:deep(.el-input-number .el-input__inner) {
+    text-align: left;
 }
 </style>
 ```

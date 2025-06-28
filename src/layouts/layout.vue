@@ -5,14 +5,14 @@
                 <img src="https://sparkbridge.cn/spark.png" alt="logo" />
                 <span>管理面板</span>
             </div>
-            <MainMenu />
+            <MainMenu :is-mobile="isMobile" @logout="handleLogout" />
         </el-aside>
 
-        <el-drawer v-model="drawerVisible" title="导航菜单" direction="ltr" :with-header="false" size="200px">
-            <MainMenu @select="drawerVisible = false" />
+        <el-drawer v-model="drawerVisible" direction="ltr" :with-header="false" size="200px">
+            <MainMenu :is-mobile="isMobile" @select="drawerVisible = false" @logout="handleLogout" />
         </el-drawer>
 
-        <el-container>
+        <el-container class="main-panel-container">
             <el-header class="main-header">
                 <div class="header-left">
                     <el-icon class="menu-button" @click="drawerVisible = true" v-if="isMobile">
@@ -21,7 +21,7 @@
                     <CyclingSlogan />
                 </div>
                 <div class="header-right">
-                    <el-button @click="handleLogout" type="danger" plain>退出登录</el-button>
+                    <el-button v-if="!isMobile" @click="handleLogout" type="danger" plain>退出登录</el-button>
                 </div>
             </el-header>
 
@@ -30,53 +30,50 @@
                     :description="announcement.content" :closable="announcement.closable"
                     @close="handleCloseAnnouncement" show-icon />
             </div>
-
             <el-main class="main-content">
                 <router-view />
             </el-main>
-
             <el-footer class="main-footer">
                 Copyright © {{ currentYear }} SparkBridge. All Rights Reserved.
             </el-footer>
-
         </el-container>
     </el-container>
 </template>
 
 <script setup>
-import { onMounted, ref,onUnmounted } from 'vue';
+// script 部分除了引入 MainMenu 的方式外，其他逻辑不变
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Menu } from '@element-plus/icons-vue';
 import { useBreakpoints } from '@vueuse/core';
-import MainMenu from './MainMenu.vue';
-// 【新增】引入我们创建的标语组件
+import { getAnnouncement } from '../api';
+import MainMenu from './MainMenu.vue'; // MainMenu 是一个独立的组件
 import CyclingSlogan from '../components/CyclingSlogan.vue';
 
-// script 部分的代码无需改动
+const announcement = ref(null);
+const currentYear = new Date().getFullYear();
 const router = useRouter();
 const drawerVisible = ref(false);
 const breakpoints = useBreakpoints({ mobile: 768 });
 const isMobile = breakpoints.smaller('mobile');
 
+// handleLogout 函数现在被父组件持有，并传递给子组件使用
+const handleLogout = () => {
+    // 如果在抽屉中点击，先关闭抽屉
+    if (drawerVisible.value) {
+        drawerVisible.value = false;
+    }
+    localStorage.removeItem('user-token');
+    ElMessage.success('已成功退出登录！');
+    router.push('/login');
+};
 
-// 【新增】获取当前年份
-const currentYear = new Date().getFullYear();
-
-// 【新增】引入新的API函数
-import { getAnnouncement } from '../api';
-
-// 【新增】用于存放公告数据的状态
-const announcement = ref(null);
-
-// 【新增】关闭公告栏的事件处理
 const handleCloseAnnouncement = () => {
-    // 将公告设置为空，v-if 指令就会将它从DOM中移除
     announcement.value = null;
     ElMessage.info('您已关闭此公告');
 };
 
-// 【新增】组件挂载时，调用API获取公告
 onMounted(async () => {
     try {
         const response = await getAnnouncement();
@@ -87,17 +84,25 @@ onMounted(async () => {
         console.error('获取公告失败:', error);
     }
 });
-
-const handleLogout = () => {
-    localStorage.removeItem('user-token');
-    ElMessage.success('已成功退出登录！');
-    router.push('/login');
-};
 </script>
+  
 
 <style scoped>
 .layout-container {
     height: 100vh;
+    /* 【新增】防止最外层容器自己产生滚动条 */
+    overflow: hidden;
+}
+
+/* 【重要修改】
+  对右侧的主面板容器（包含header, main, footer）应用flex布局
+*/
+.main-panel-container {
+    display: flex;
+    flex-direction: column;
+    /* 设置主轴为垂直方向 */
+    height: 100%;
+    /* 确保它撑满父容器的高度 */
 }
 
 /* 【重要修改】将侧边栏的背景色与菜单的背景色统一 */
@@ -122,7 +127,16 @@ const handleLogout = () => {
     margin-right: 10px;
 }
 
+.announcement-wrapper {
+    /* 【新增】设置公告栏不收缩 */
+    flex-shrink: 0;
+    /* 其他样式保持不变 */
+    padding: 15px 20px 0 20px;
+    background-color: #f0f2f5;
+}
+
 .main-header {
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -141,8 +155,14 @@ const handleLogout = () => {
 }
 
 .main-content {
-    background-color: #f0f2f5;
-    padding: 20px;
+    /* 【修改】
+        flex: 1; -> 让主内容区占据所有剩余的垂直空间
+        overflow-y: auto; -> 当内容超出其高度时，只在主内容区内部出现垂直滚动条
+      */
+        flex: 1;
+        overflow-y: auto;
+        background-color: #f0f2f5;
+        padding: 20px;
 }
 
 /* 抽屉样式保持不变 */
@@ -154,18 +174,18 @@ const handleLogout = () => {
     height: 100%;
 }
 
-/* 【新增】页脚样式 */
+/* --- 页脚样式 --- */
 .main-footer {
+    /* 【新增】设置footer不收缩 */
+    flex-shrink: 0;
+    /* 其他样式保持不变 */
     height: 40px;
-    /* 设置一个合适的高度 */
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 14px;
     color: #888;
     background-color: #f0f2f5;
-    /* 与主内容区背景色一致或稍作区分 */
     border-top: 1px solid #e6e6e6;
-    /* 可选：添加一个上边框 */
 }
 </style>
