@@ -25,11 +25,12 @@
                 </div>
             </el-header>
 
-            <div class="announcement-wrapper" v-if="announcement && announcement.necessary">
+            <div class="announcement-wrapper" v-if="announcement">
                 <el-alert :title="announcement.title" :type="announcement.type || 'info'"
                     :description="announcement.content" :closable="announcement.closable"
-                    @close="handleCloseAnnouncement" show-icon />
+                    @close="handleCloseAnnouncement" show-icon v-if="announcement.nesscary" />
             </div>
+
             <el-main class="main-content">
                 <router-view />
             </el-main>
@@ -77,6 +78,7 @@ const handleCloseAnnouncement = () => {
 onMounted(async () => {
     try {
         const response = await getAnnouncement();
+        console.log('获取公告成功:', response.data);
         if (response.data.code === 0) {
             announcement.value = response.data.data;
         }

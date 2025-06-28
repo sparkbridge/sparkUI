@@ -31,7 +31,7 @@
 </template>
 
 <script setup>
-import { Promotion, Download } from '@element-plus/icons-vue';
+import { Promotion, Download,Delete } from '@element-plus/icons-vue';
 
 const props = defineProps({
     plugin: { type: Object, required: true },
