@@ -49,7 +49,24 @@
             </el-row>
         </el-form>
 
-        <el-dialog v-model="dialogVisible" :title="`编辑 - ${currentItemInfo?.item.desc}`" width="500px">
+        <!-- <el-dialog v-model="dialogVisible" :title="`编辑 - ${currentItemInfo?.item.desc}`" width="500px">
+            <div v-for="(val, index) in tempArray" :key="index" style="margin-bottom: 10px;">
+                <el-input v-model="tempArray[index]" placeholder="请输入内容">
+                    <template #append>
+                        <el-button @click="deleteItem(index)" type="danger" :icon="Delete" />
+                    </template>
+                </el-input>
+            </div>
+            <el-button @click="addItem" type="primary" plain :icon="Plus" style="width: 100%">新增一项</el-button>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="dialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="confirmEdit">确定</el-button>
+                </span>
+            </template>
+        </el-dialog> -->
+        <el-dialog v-model="dialogVisible" :title="`编辑 - ${currentItemInfo?.item.desc}`"
+            :width="isMobile ? '90%' : '500px'">
             <div v-for="(val, index) in tempArray" :key="index" style="margin-bottom: 10px;">
                 <el-input v-model="tempArray[index]" placeholder="请输入内容">
                     <template #append>
@@ -74,6 +91,7 @@ import { useBreakpoints } from '@vueuse/core';
 import { ElMessage } from 'element-plus';
 import { Edit, Delete, Plus } from '@element-plus/icons-vue';
 import { getGlobalConfig, updateSingleConfig, triggerButtonClickEvent } from '../api';
+
 
 const breakpoints = useBreakpoints({ mobile: 768 });
 const isMobile = breakpoints.smaller('mobile');
@@ -278,7 +296,7 @@ onMounted(async () => {
     height: 100vh;
 }
 
-.header {
+/* .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -288,10 +306,11 @@ onMounted(async () => {
 .el-form-item {
     margin-bottom: 18px;
 }
+*/
 
 .el-card {
     height: 100%;
-}
+} 
 
 :deep(.el-input-number .el-input__inner) {
     text-align: left;
@@ -307,11 +326,11 @@ onMounted(async () => {
     border-radius: 4px;
 }
 
-.dashboard-form {
+/* .dashboard-form {
     background-color: #fff;
     padding: 20px;
     border-radius: 4px;
-}
+} */
 
 .el-form-item {
     margin-bottom: 0px;
