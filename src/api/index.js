@@ -15,7 +15,7 @@ export const getGlobalConfig = () => {
 
 };
 export const updateSingleConfig = (payload) => {
-    return axios.post('/api/update_config', payload);
+    return axios.post('/api/update_global_config', payload);
 };
 
 // --- 认证相关的API ---
@@ -24,9 +24,9 @@ export const loginUser = (credentials) => {
     return new Promise((resolve) => {
         setTimeout(() => {
             resolve({
-                data:{
-                    code : 0,
-                    data: {token: '1234567890'}
+                data: {
+                    code: 0,
+                    data: { token: '1234567890' }
                 }
             });
         }, 200);
@@ -55,7 +55,7 @@ const mockLogFiles = {
         { timestamp: '2025-06-27 19:00:10', level: 'ERROR', module: 'Config', message: '配置文件 config.json 读取失败: 文件不存在。' },
         { timestamp: '2025-06-27 20:25:05', level: 'INFO', module: 'Backup', message: '执行了备份任务。' },
     ]
-  };
+};
 
 // getLogDates 函数保持不变
 export const getLogDates = () => {
@@ -69,7 +69,7 @@ export const getLogDates = () => {
             });
         }, 200);
     });
-  };
+};
 
 /**
  * 【重要修改】此函数现在返回结构化的日志对象数组
@@ -91,7 +91,7 @@ export const getLogContent = (date) => {
             }
         }, 400);
     });
-  };
+};
 
 /**
  * 【新增】获取可私聊的用户列表
@@ -207,7 +207,7 @@ export const getSponsors = () => {
             { id: 4, name: '赞助商D', logoUrl: 'https://placehold.co/120x60/f56c6c/FFF?text=Sponsor+D', websiteUrl: 'https://example.com', message: '加油！' },
             { id: 5, name: '赞助商E', logoUrl: 'https://placehold.co/120x60/909399/FFF?text=Sponsor+E', websiteUrl: 'https://example.com', message: '期待更多新功能。' },
             { id: 6, name: '赞助商F', logoUrl: 'https://placehold.co/120x60/303133/FFF?text=Sponsor+F', websiteUrl: 'https://example.com', message: '为开源社区做贡献！' },
-          ];
+        ];
         setTimeout(() => {
             resolve({
                 data: {
@@ -217,7 +217,7 @@ export const getSponsors = () => {
             });
         }, 300);
     });
-  };
+};
 
 
 // 模拟后端的插件数据库和它们的状态
@@ -297,12 +297,24 @@ const mockRules = [
         actions: [
             { id: 'act_2_1', type: 'reply_text', value: '管理员您好，系统运行正常。' }
         ]
-    }
-  ];
+    },
+    {
+        id: 'rule_3',
+        name: '每日健康报告',
+        eventType: 'scheduled_task', // 事件类型为定时任务
+        schedule: '0 9 * * *',      // 【新增】schedule字段，值为Cron表达式（表示每天上午9点）
+        conditions: [
+            // 定时任务也可以有条件，例如：仅在工作日发送
+        ],
+        actions: [
+            { id: 'act_3_1', type: 'reply_text', value: '早上好！今天的系统状态一切正常。' }
+        ]
+      }
+];
 const mockVariables = [
     { id: 'var_1', key: 'adminQQ', value: '10001' },
     { id: 'var_2', key: 'newUserGreeted', value: 'false' },
-  ];
+];
 export const getRulesEngineData = () => {
     return new Promise(resolve => {
         setTimeout(() => {
