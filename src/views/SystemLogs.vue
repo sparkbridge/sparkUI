@@ -15,9 +15,9 @@
           />
           <el-radio-group v-model="filterLevel" size="small">
             <el-radio-button label="All">全部</el-radio-button>
-            <el-radio-button label="INFO">信息</el-radio-button>
-            <el-radio-button label="WARN">警告</el-radio-button>
-            <el-radio-button label="ERROR">错误</el-radio-button>
+            <el-radio-button label="info">信息</el-radio-button>
+            <el-radio-button label="warn">警告</el-radio-button>
+            <el-radio-button label="error">错误</el-radio-button>
           </el-radio-group>
         </div>
       </div>
@@ -80,9 +80,9 @@ const disabledDate = (time) => {
 
 const getTagType = (level) => {
     switch (level) {
-        case 'INFO': return 'success';
-        case 'WARN': return 'warning';
-        case 'ERROR': return 'danger';
+        case 'info': return 'success';
+        case 'warn': return 'warning';
+        case 'error': return 'danger';
         default: return 'info';
     }
 };

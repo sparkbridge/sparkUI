@@ -171,6 +171,8 @@ const handleValueChange = async (pluginId, changeK, item) => {
         const response = await updateSingleConfig(payload);
         if (!(response.data && response.data.code === 0)) {
             ElMessage.error(response.data.message || '更新失败');
+        }else{
+            ElMessage.success(response.data.message || '更新成功');
         }
     } catch (error) {
         ElMessage.error(error.response?.data?.message || '网络请求失败');
@@ -196,7 +198,7 @@ const handleAction = async (categoryName, key, item) => {
         }
 
         // 2. 根据API返回的code，决定前端的后续动作
-        switch (resData.status) {
+        switch (resData.code) {
             // code: 0 -> 普通成功提示
             case 0:
                 ElMessage.success(resData.message || '操作成功！');
@@ -281,7 +283,7 @@ onMounted(async () => {
     loading.value = true;
     try {
         const response = await getGlobalConfig();
-        configData.value = response.data.data;
+        configData.value = response.data.data.plugins;
     } catch (error) {
         ElMessage.error('获取配置失败！');
     } finally {

@@ -11,7 +11,7 @@ export default defineConfig({
       // '/foo': 'http://localhost:4567',
       // 选项写法
       '/api': {
-        target: 'http://localhost:3002', // 代理的目标地址
+        target: 'http://localhost:3000', // 代理的目标地址
         changeOrigin: true, // 需要虚拟主机站点
         // 如果你的后端接口路径没有 /api 前缀，可以用 rewrite 去掉
         // rewrite: (path) => path.replace(/^\/api/, '') 

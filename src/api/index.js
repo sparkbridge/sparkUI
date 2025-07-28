@@ -1,26 +1,19 @@
 import axios from 'axios';
 
-const global_config = { "status": "success", "message": "GET request for globa_config received.", "data": { "base": { "target": { "type": 4, "value": "ws://127.0.0.1:3001", "desc": "连接地址" }, "qid": { "type": 5, "value": 114514, "desc": "QQ号码" }, "pwd": { "type": 4, "value": "12345678", "desc": "连接密码" }, "onebot_mode_v11": { "type": 2, "value": true, "desc": "是否使用onebot适配器" }, "debugMode": { "type": 2, "value": false, "desc": "开发者模式" } }, "telemetry": { "webPort": { "type": 5, "value": 3002, "desc": "网页端口" }, "allow_global": { "type": 2, "value": true, "desc": "是否允许外网访问" }, "lock_panel": { "type": 2, "value": false, "desc": "是否锁定面板,锁定后只能提供私聊机器人获取临时密码" }, "reply_after_auth": { "type": 2, "value": true, "desc": "登入面板后是否提醒" }, "pwd_timeout": { "type": 5, "value": 5, "desc": "密码过期时间（单位分钟）" } }, "mc": { "group": { "type": 5, "value": 114514, "desc": "监听的群聊" }, "admins": { "type": 1, "value": [1919810], "desc": "管理员列表（请仅填入数字）" } }, "JandLandCmsg": { "join": { "type": 2, "value": true, "desc": "是否开启加入提示" }, "left": { "type": 2, "value": true, "desc": "是否开启离开提示" }, "chat_group": { "type": 2, "value": true, "desc": "是否转发消息到群聊" }, "chat_server": { "type": 2, "value": false, "desc": "是否转发消息到服务器（默认为关闭，默认的正则表达式附带了chat xxxx的正则）" }, "chatMaxLength": { "type": 5, "value": 20, "desc": "聊天最大字数长度" }, "chatShield": { "type": 1, "value": ["傻逼"], "desc": "聊天屏蔽词语" } }, "JandLandCmsg_lang": { "join": { "type": 4, "value": "%PLAYER_NAME% 进入了服务器", "desc": "加入服务器向群聊中发送的消息" }, "left": { "type": 4, "value": "%PLAYER_NAME% 离开了服务器", "desc": "离开服务器向群聊中发送的消息" }, "chat_group": { "type": 4, "value": "%PLAYER_NAME% \u003E\u003E %PLAYER_MSG%", "desc": "发送到群聊的聊天信息格式" }, "chat_server": { "type": 4, "value": "[群聊]%USER_XBOXID% \u003E\u003E %PLAYER_MSG%", "desc": "发送到服务器的聊天信息格式" } }, "niuzi": { "pkCD": { "type": 5, "value": 2, "desc": "功能「比划比划」的冷却时长，单位为分。" }, "init_cm": { "type": 5, "value": 10, "desc": "功能「领养牛子」的初始成长最大值。" }, "reget_cd": { "type": 5, "value": 6, "desc": "丢弃牛子后的冷却CD，单位分钟" }, "tt_cd": { "type": 5, "value": 40, "desc": "功能「贴贴」的冷却时长，单位为分。" }, "tt_grow": { "type": 5, "value": 120, "desc": "功能「贴贴」的成长值" }, "win_p": { "type": 5, "value": 0.4, "desc": "赢的概率" }, "los_p": { "type": 5, "value": 0.5, "desc": "输的概率" }, "dorp_p": { "type": 5, "value": 0.1, "desc": "双输的概率" } }, "autocomplete": { "rep_1": { "type": 1, "value": ["让我看看谁没有补全括号？", "TNND，为什么不补齐？"], "desc": "补全的时候说的话" }, "rep_2": { "type": 1, "value": ["让我看看谁没有补全括号？哦，补不上", "为什么自己就补全了？爬"], "desc": "无法补全的时候说的话" } } } }
+//const global_config = { "status": "success", "message": "GET request for globa_config received.", "data": { "base": { "target": { "type": 4, "value": "ws://127.0.0.1:3001", "desc": "连接地址" }, "qid": { "type": 5, "value": 114514, "desc": "QQ号码" }, "pwd": { "type": 4, "value": "12345678", "desc": "连接密码" }, "onebot_mode_v11": { "type": 2, "value": true, "desc": "是否使用onebot适配器" }, "debugMode": { "type": 2, "value": false, "desc": "开发者模式" } }, "telemetry": { "webPort": { "type": 5, "value": 3002, "desc": "网页端口" }, "allow_global": { "type": 2, "value": true, "desc": "是否允许外网访问" }, "lock_panel": { "type": 2, "value": false, "desc": "是否锁定面板,锁定后只能提供私聊机器人获取临时密码" }, "reply_after_auth": { "type": 2, "value": true, "desc": "登入面板后是否提醒" }, "pwd_timeout": { "type": 5, "value": 5, "desc": "密码过期时间（单位分钟）" } }, "mc": { "group": { "type": 5, "value": 114514, "desc": "监听的群聊" }, "admins": { "type": 1, "value": [1919810], "desc": "管理员列表（请仅填入数字）" } }, "JandLandCmsg": { "join": { "type": 2, "value": true, "desc": "是否开启加入提示" }, "left": { "type": 2, "value": true, "desc": "是否开启离开提示" }, "chat_group": { "type": 2, "value": true, "desc": "是否转发消息到群聊" }, "chat_server": { "type": 2, "value": false, "desc": "是否转发消息到服务器（默认为关闭，默认的正则表达式附带了chat xxxx的正则）" }, "chatMaxLength": { "type": 5, "value": 20, "desc": "聊天最大字数长度" }, "chatShield": { "type": 1, "value": ["傻逼"], "desc": "聊天屏蔽词语" } }, "JandLandCmsg_lang": { "join": { "type": 4, "value": "%PLAYER_NAME% 进入了服务器", "desc": "加入服务器向群聊中发送的消息" }, "left": { "type": 4, "value": "%PLAYER_NAME% 离开了服务器", "desc": "离开服务器向群聊中发送的消息" }, "chat_group": { "type": 4, "value": "%PLAYER_NAME% \u003E\u003E %PLAYER_MSG%", "desc": "发送到群聊的聊天信息格式" }, "chat_server": { "type": 4, "value": "[群聊]%USER_XBOXID% \u003E\u003E %PLAYER_MSG%", "desc": "发送到服务器的聊天信息格式" } }, "niuzi": { "pkCD": { "type": 5, "value": 2, "desc": "功能「比划比划」的冷却时长，单位为分。" }, "init_cm": { "type": 5, "value": 10, "desc": "功能「领养牛子」的初始成长最大值。" }, "reget_cd": { "type": 5, "value": 6, "desc": "丢弃牛子后的冷却CD，单位分钟" }, "tt_cd": { "type": 5, "value": 40, "desc": "功能「贴贴」的冷却时长，单位为分。" }, "tt_grow": { "type": 5, "value": 120, "desc": "功能「贴贴」的成长值" }, "win_p": { "type": 5, "value": 0.4, "desc": "赢的概率" }, "los_p": { "type": 5, "value": 0.5, "desc": "输的概率" }, "dorp_p": { "type": 5, "value": 0.1, "desc": "双输的概率" } }, "autocomplete": { "rep_1": { "type": 1, "value": ["让我看看谁没有补全括号？", "TNND，为什么不补齐？"], "desc": "补全的时候说的话" }, "rep_2": { "type": 1, "value": ["让我看看谁没有补全括号？哦，补不上", "为什么自己就补全了？爬"], "desc": "无法补全的时候说的话" } } } }
 
 // --- 配置相关的API ---
 export const getGlobalConfig = () => {
-    // return axios.get('/api/global_config');
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                data: global_config
-            });
-        }, 200);
-    });
+    return axios.get('/api/config/all');
 
 };
 export const updateSingleConfig = (payload) => {
-    return axios.post('/api/update_global_config', payload);
+    return axios.post('/api/config/update-plugin', payload);
 };
 
 // --- 认证相关的API ---
 export const loginUser = (credentials) => {
-    // return axios.post('/api/login', credentials);
+   // return axios.post('/api/auth/login', credentials); // <-- 路徑已更新
     return new Promise((resolve) => {
         setTimeout(() => {
             resolve({
@@ -41,57 +34,25 @@ export const triggerButtonClickEvent = (payload) => {
 
 // --- 【新增】系统日志相关的API ---
 
-const mockLogFiles = {
-    '2025-06-28': [
-        { timestamp: '2025-06-28 14:10:15', level: 'INFO', module: 'Auth', message: '用户 admin 登录成功。' },
-        { timestamp: '2025-06-28 14:11:02', level: 'INFO', module: 'Config', message: '系统配置已更新: debug模式已开启。' },
-        { timestamp: '2025-06-28 14:11:45', level: 'WARN', module: 'PluginMarket', message: `插件 'old-plugin' 加载缓慢，耗时超过 500ms。` },
-        { timestamp: '2025-06-28 14:15:20', level: 'ERROR', module: 'Database', message: '无法连接到数据库服务，请求超时。' },
-        { timestamp: '2025-06-28 14:16:00', level: 'DEBUG', module: 'WebServer', message: '收到来自 127.0.0.1 的心跳包。' },
-        { timestamp: '2025-06-28 15:00:00', level: 'INFO', module: 'RulesEngine', message: '规则 "欢迎新用户" 已成功触发。' },
-    ],
-    '2025-06-27': [
-        { timestamp: '2025-06-27 18:30:00', level: 'INFO', module: 'WebServer', message: '系统服务已启动，监听端口 3002。' },
-        { timestamp: '2025-06-27 19:00:10', level: 'ERROR', module: 'Config', message: '配置文件 config.json 读取失败: 文件不存在。' },
-        { timestamp: '2025-06-27 20:25:05', level: 'INFO', module: 'Backup', message: '执行了备份任务。' },
-    ]
-};
-
-// getLogDates 函数保持不变
+/**
+ * 【已修改】從後端獲取所有有日誌的日期列表
+ * @returns {Promise} - 返回一個解析後為 { data: { code: 0, data: [...] } } 的 Promise
+ */
 export const getLogDates = () => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                data: {
-                    code: 0,
-                    data: Object.keys(mockLogFiles) // 返回所有日期的键名
-                }
-            });
-        }, 200);
-    });
+    // 使用 axios 呼叫真實的後端 API
+    return axios.get('/api/logs/dates');
 };
 
 /**
- * 【重要修改】此函数现在返回结构化的日志对象数组
- * @param {string} date - 日期字符串, e.g., "2025-06-27"
- * @returns {Promise}
+ * 【已修改】根據日期從後端獲取結構化的日誌物件陣列
+ * @param {string} date - 日期字串, e.g., "2025-06-27"
+ * @returns {Promise} - 返回一個解析後為 { data: { code: 0, data: [...] } } 的 Promise
  */
 export const getLogContent = (date) => {
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            if (mockLogFiles[date]) {
-                resolve({
-                    data: {
-                        code: 0,
-                        data: mockLogFiles[date] // 直接返回对象数组
-                    }
-                });
-            } else {
-                reject({ message: '找不到指定日期的日志文件' });
-            }
-        }, 400);
-    });
+    // 使用 axios 呼叫真實的後端 API，並將日期作為路徑參數
+    return axios.get(`/api/logs/content/${date}`);
 };
+
 
 /**
  * 【新增】获取可私聊的用户列表
