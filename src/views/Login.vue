@@ -7,7 +7,7 @@
 
             <div class="avatar-section">
                 <div class="avatar-wrapper">
-                    <img src="spark.jpg" alt="Project Mascot" class="avatar-img" />
+                    <img src="/public/spark.jpg" alt="Project Mascot" class="avatar-img" />
 
                     <div class="ring-pulse"></div>
                     <div class="ring-pulse delay"></div>
