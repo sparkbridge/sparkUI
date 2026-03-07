@@ -1,356 +1,361 @@
 <template>
-    <div class="dashboard-container">
-        <div class="dashboard-header">
-            <h1>配置管理</h1>
-            <el-button type="primary" @click="exportConfig" :loading="isSaving">导出为JSON</el-button>
+    <div class="dashboard-content">
+        <div class="section-intro">
+            <h1>已安装插件</h1>
+            <p>管理系统核心适配器与第三方功能扩展</p>
         </div>
 
-        <el-form label-position="top" class="dashboard-form" ref="formRef" :model="configData" :rules="formRules"
-            v-if="configData">
-            <el-row :gutter="20">
-                <el-col :md="12" :sm="24" :xs="24" v-for="(category, categoryName) in configData" :key="categoryName"
-                    style="margin-bottom: 20px;">
-                    <el-card>
-                        <template #header>
-                            <div class="card-header"><span>{{ categoryName }}</span></div>
-                        </template>
-                        <div v-for="(item, key) in category" :key="key">
-                            <el-form-item :label="item.desc" :prop="`${categoryName}.${key}.value`">
-
-                                <div v-if="item.type === CONFIG_TYPE.EditArray"
-                                    style="display: flex; align-items: center; width: 100%;">
-                                    <el-input :model-value="item.value" placeholder="点击右侧按钮编辑数组" readonly>
-                                        <template #append>
-                                            <el-button @click="openArrayEditor(categoryName, key, item)" :icon="Edit" />
-                                        </template>
-                                    </el-input>
-                                </div>
-
-                                <el-switch v-else-if="item.type === CONFIG_TYPE.switch" v-model="item.value"
-                                    @change="handleValueChange(categoryName, key, item)" />
-                                <el-select v-else-if="item.type === CONFIG_TYPE.Choosing" v-model="item.value"
-                                    @change="handleValueChange(categoryName, key, item)" placeholder="请选择"
-                                    style="width: 100%;"><el-option v-for="(option, index) in item.options" :key="index"
-                                        :label="option" :value="String(index)" /></el-select>
-                                <el-input v-else-if="item.type === CONFIG_TYPE.text" v-model="item.value"
-                                    @change="handleValueChange(categoryName, key, item)" :placeholder="item.desc" />
-                                <el-input-number v-else-if="item.type === CONFIG_TYPE.number" v-model="item.value"
-                                    @change="handleValueChange(categoryName, key, item)" :controls="false"
-                                    style="width: 100%;" />
-                                <el-button v-else-if="item.type === CONFIG_TYPE.buttom" type="primary" plain
-                                    @click="handleAction(categoryName, key, item)">{{ item.desc }}</el-button>
-                                <el-input v-else v-model="item.value"
-                                    @change="handleValueChange(categoryName, key, item)"
-                                    :placeholder="'未知类型: ' + item.type" />
-                            </el-form-item>
-                        </div>
-                    </el-card>
-                </el-col>
-            </el-row>
-        </el-form>
-
-        <!-- <el-dialog v-model="dialogVisible" :title="`编辑 - ${currentItemInfo?.item.desc}`" width="500px">
-            <div v-for="(val, index) in tempArray" :key="index" style="margin-bottom: 10px;">
-                <el-input v-model="tempArray[index]" placeholder="请输入内容">
-                    <template #append>
-                        <el-button @click="deleteItem(index)" type="danger" :icon="Delete" />
-                    </template>
-                </el-input>
+        <div class="plugin-grid">
+            <div v-for="p in plugins" :key="p.id" class="plugin-card" :class="{ 'is-ignored': p.status === 'ignored' }">
+                <div class="card-head">
+                    <div class="p-icon">
+                        <component :is="getIcon(p.info.name)" :size="20" />
+                    </div>
+                    <div class="status-badge" :class="p.status">{{ p.status }}</div>
+                </div>
+                <div class="card-body">
+                    <div class="title-row">
+                        <h3>{{ p.info.name }}</h3>
+                        <span class="v-tag">v{{ formatVer(p.info.version) }}</span>
+                    </div>
+                    <p class="description">{{ p.info.desc || '暂无描述' }}</p>
+                </div>
+                <div class="card-footer">
+                    <button class="config-action-btn" @click="handleOpenConfig(p.id)">配置项</button>
+                </div>
             </div>
-            <el-button @click="addItem" type="primary" plain :icon="Plus" style="width: 100%">新增一项</el-button>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="dialogVisible = false">取消</el-button>
-                    <el-button type="primary" @click="confirmEdit">确定</el-button>
-                </span>
-            </template>
-        </el-dialog> -->
-        <el-dialog v-model="dialogVisible" :title="`编辑 - ${currentItemInfo?.item.desc}`"
-            :width="isMobile ? '90%' : '500px'">
-            <div v-for="(val, index) in tempArray" :key="index" style="margin-bottom: 10px;">
-                <el-input v-model="tempArray[index]" placeholder="请输入内容">
-                    <template #append>
-                        <el-button @click="deleteItem(index)" type="danger" :icon="Delete" />
-                    </template>
-                </el-input>
-            </div>
-            <el-button @click="addItem" type="primary" plain :icon="Plus" style="width: 100%">新增一项</el-button>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="dialogVisible = false">取消</el-button>
-                    <el-button type="primary" @click="confirmEdit">确定</el-button>
-                </span>
-            </template>
-        </el-dialog>
+        </div>
+
+        <ConfigModal :isOpen="modalVisible" :schema="currentSchema" :loading="saveLoading" @close="modalVisible = false"
+            @save="onSaveConfig" />
     </div>
 </template>
-
 <script setup>
-import { ref, onMounted, reactive, watch } from 'vue';
-import { useBreakpoints } from '@vueuse/core';
-import { ElMessage } from 'element-plus';
-import { Edit, Delete, Plus } from '@element-plus/icons-vue';
-import { getGlobalConfig, updateSingleConfig, triggerButtonClickEvent } from '../api';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import {
+    LayoutGridIcon, MonitorIcon, LogOutIcon, PackageIcon,
+    SettingsIcon, CloudSunIcon, CpuIcon, ShieldCheckIcon,
+    RegexIcon, MenuIcon
+} from 'lucide-vue-next';
+import { api } from '../api';
+import { showNotice } from '../utils/notice';
+import ConfigModal from '../components/ConfigModal.vue';
 
+const router = useRouter();
+const isMenuOpen = ref(false);
+const viewMode = ref('grid');
+const activePath = ref('');
+const currentTitle = ref('');
+const plugins = ref([]);
+const customPages = ref([]);
 
-const breakpoints = useBreakpoints({ mobile: 768 });
-const isMobile = breakpoints.smaller('mobile');
+// 弹窗相关
+const modalVisible = ref(false);
+const currentSchema = ref({});
+const saveLoading = ref(false);
+const editingId = ref('');
 
-// --- 状态定义 ---
-const CONFIG_TYPE = { EditArray: 1, switch: 2, Choosing: 3, text: 4, number: 5, buttom: 6 };
-const loading = ref(false);
-const isSaving = ref(false);
-const configData = ref({});
-const dialogVisible = ref(false);
-const tempArray = ref([]);
-const currentItemInfo = ref(null);
-const formRef = ref(null);
-const formRules = reactive({});
-
-// --- 侦听器，动态生成校验规则 ---
-watch(configData, (newConfig) => {
-    Object.keys(formRules).forEach(key => delete formRules[key]);
-    if (!newConfig) return;
-    for (const categoryName in newConfig) {
-        if (Object.hasOwnProperty.call(newConfig, categoryName)) {
-            formRules[categoryName] = {};
-            const category = newConfig[categoryName];
-            for (const key in category) {
-                if (Object.hasOwnProperty.call(category, key)) {
-                    const item = category[key];
-                    if (item.type === CONFIG_TYPE.number) {
-                        formRules[categoryName][key] = {
-                            value: [{ type: 'number', message: '该字段必须为数字值', trigger: 'blur' }]
-                        };
-                    }
-                }
-            }
-        }
-    }
-}, { deep: true });
-
-// --- 方法 ---
-
-// 【恢复】打开数组编辑弹窗
-const openArrayEditor = (categoryName, key, item) => {
-    currentItemInfo.value = { categoryName, key, item };
-    const currentVal = item.value ? String(item.value).split(',') : [];
-    tempArray.value = [...currentVal];
-    dialogVisible.value = true;
-};
-
-// 【恢复】在弹窗中新增一项
-const addItem = () => {
-    tempArray.value.push('');
-};
-
-// 【恢复】在弹窗中删除一项
-const deleteItem = (index) => {
-    tempArray.value.splice(index, 1);
-};
-
-// 【恢复】确认弹窗编辑
-const confirmEdit = () => {
-    const newValue = tempArray.value.filter(val => val !== null && val.trim() !== '').join(',');
-    const { categoryName, key, item } = currentItemInfo.value;
-    item.value = newValue;
-    handleValueChange(categoryName, key, item);
-    dialogVisible.value = false;
-};
-
-// 实时更新函数
-const handleValueChange = async (pluginId, changeK, item) => {
-    let finalValue = item.value;
-    if (item.type === CONFIG_TYPE.Choosing) { finalValue = Number(item.value); }
-    if (item.type === CONFIG_TYPE.EditArray) {
-        // 数组元素可以是任意字符串，所以不再转换成数字
-        finalValue = String(item.value).split(',').filter(i => i.trim());
-    }
-    const payload = { plugin_id: pluginId, changeK: changeK, value: finalValue };
+const init = async () => {
     try {
-        const response = await updateSingleConfig(payload);
-        if (!(response.data && response.data.code === 0)) {
-            ElMessage.error(response.data.message || '更新失败');
+        const pRes = await api.getPlugins();
+        if (pRes.code === 200) {
+            // 适配对象结构转数组
+            plugins.value = Object.entries(pRes.data).map(([key, val]) => ({ id: key, ...val }));
+        }
+        const cRes = await api.getCustomPages();
+        customPages.value = Array.isArray(cRes) ? cRes : [];
+    } catch (err) {
+        console.error(err);
+        showNotice('数据加载失败，请检查网络', 'error');
+    }
+};
+
+const formatVer = (v) => Array.isArray(v) ? v.join('.') : (v || '1.0.0');
+
+const getIcon = (name) => {
+    const n = name.toLowerCase();
+    if (n.includes('regex')) return RegexIcon;
+    if (n.includes('system')) return CpuIcon;
+    if (n.includes('bridge')) return ShieldCheckIcon;
+    if (n.includes('motd')) return CloudSunIcon;
+    return PackageIcon;
+};
+
+// 导航逻辑：在移动端点击后自动关闭菜单
+const handleNavClick = (mode, page = null) => {
+    viewMode.value = mode;
+    isMenuOpen.value = false;
+    if (page) {
+        activePath.value = page.path;
+        currentTitle.value = page.title;
+    }
+};
+
+const handleOpenConfig = async (id) => {
+    editingId.value = id;
+    try {
+        const res = await api.getConfig(id);
+        if (res.code === 200) {
+            currentSchema.value = res.data;
+            modalVisible.value = true;
         }else{
-            ElMessage.success(response.data.message || '更新成功');
+            showNotice('插件没有提供网页编辑的配置项，您可能需要手动修改配置文件', 'info');
         }
-    } catch (error) {
-        ElMessage.error(error.response?.data?.message || '网络请求失败');
-    }
-};
-  
-// 【最终版】处理所有按钮的点击事件
-const handleAction = async (categoryName, key, item) => {
-    const payload = {
-        plugin_name: categoryName,
-        event_name: key,
-    };
-
-    try {
-        ElMessage.info(`正在执行操作: ${item.desc}...`);
-        // 1. 所有按钮点击都先调用API
-        const response = await triggerButtonClickEvent(payload);
-        const resData = response.data;
-
-        if (!resData) {
-            ElMessage.error('无效的后端响应');
-            return;
-        }
-
-        // 2. 根据API返回的code，决定前端的后续动作
-        switch (resData.code) {
-            // code: 0 -> 普通成功提示
-            case 0:
-                ElMessage.success(resData.message || '操作成功！');
-                break;
-
-            // code: 200 -> 弹出HTML内容的对话框
-            case 200:
-                if (resData.message) {
-                    ElMessageBox.alert(resData.message, item.desc, {
-                        dangerouslyUseHTMLString: true,
-                        confirmButtonText: '好的',
-                    });
-                }
-                break;
-
-            // code: 303 -> 跳转到指定URL
-            case 303:
-                if (resData.url) {
-                    window.open(resData.url, '_blank');
-                } else {
-                    ElMessage.error('跳转失败：URL未在响应中提供。');
-                }
-                break;
-
-            // 其他所有非0，非200，非303的code -> 统一作为错误弹窗处理
-            default:
-                ElMessageBox.alert(resData.message || '发生未知错误', '操作失败', {
-                    confirmButtonText: '好的',
-                    type: 'error',
-                });
-                break;
-        }
-
-    } catch (error) {
-        // 网络层或服务器500错误
-        console.error('按钮事件API调用失败:', error);
-        const errorMessage = error.response?.data?.message || '操作执行失败';
-        ElMessageBox.alert(errorMessage, '请求错误', {
-            confirmButtonText: '好的',
-            type: 'error',
-        });
+    } catch (err) {
+        console.error(err);
+        showNotice('插件没有提供网页编辑的配置项，您可能需要手动修改配置文件', 'info');
     }
 };
 
-
-// 导出配置函数
-const exportConfig = () => {
-    isSaving.value = true;
+const onSaveConfig = async (payload) => {
+    saveLoading.value = true;
     try {
-        const dataToExport = JSON.parse(JSON.stringify(configData.value));
-        Object.values(dataToExport).forEach(category => {
-            Object.values(category).forEach(item => {
-                if (item.type === CONFIG_TYPE.EditArray && typeof item.value === 'string') {
-                    item.value = item.value.split(',').filter(i => i.trim());
-                }
-                if (item.type === CONFIG_TYPE.Choosing) {
-                    item.value = Number(item.value);
-                }
-            });
-        });
-        const jsonString = JSON.stringify(dataToExport, null, 2);
-        const blob = new Blob([jsonString], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'config.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        ElMessage.success('配置已成功导出！');
-    } catch (error) {
-        console.error('导出JSON失败:', error);
-        ElMessage.error('导出失败，请查看控制台日志。');
+        const res = await api.saveConfig(editingId.value, payload);
+        if (res.code === 200) {
+            showNotice('配置保存成功！', 'success');
+            modalVisible.value = false;
+        }
+    } catch (e) {
+        showNotice('保存失败，请检查后端', 'error');
     } finally {
-        isSaving.value = false;
+        saveLoading.value = false;
     }
 };
 
-// 组件挂载
-onMounted(async () => {
-    loading.value = true;
-    try {
-        const response = await getGlobalConfig();
-        configData.value = response.data.data.plugins;
-    } catch (error) {
-        ElMessage.error('获取配置失败！');
-    } finally {
-        loading.value = false;
-    }
-});
+const handleLogout = () => {
+    localStorage.removeItem('sb3_token');
+    showNotice('已安全退出登录', 'info');
+    router.push('/login');
+};
 
+onMounted(init);
 </script>
-
 <style scoped>
-.dashboard-container {
-    height: 100vh;
+/* --- 1. 页面容器与头部 --- */
+.dashboard-content {
+    animation: fadeIn 0.4s ease-out;
 }
 
-/* .header {
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section-intro {
+    margin-bottom: 32px;
+}
+
+.section-intro h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 8px 0;
+}
+
+.section-intro p {
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* --- 2. 插件响应式网格 --- */
+.plugin-grid {
+    display: grid;
+    /* 核心：自动填充列，每列最小 300px，最大平分空间 */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+/* --- 3. 插件卡片样式 --- */
+.plugin-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.plugin-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 30px rgba(59, 130, 246, 0.08);
+    border-color: #3b82f6;
+}
+
+/* 忽略状态卡片变灰 */
+.plugin-card.is-ignored {
+    opacity: 0.6;
+    filter: grayscale(1);
+    border-style: dashed;
+}
+
+/* --- 4. 卡片头部 (图标与状态) --- */
+.card-head {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #dcdfe6;
-}
-
-.el-form-item {
-    margin-bottom: 18px;
-}
-*/
-
-.el-card {
-    height: 100%;
-} 
-
-:deep(.el-input-number .el-input__inner) {
-    text-align: left;
-}
-
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 20px;
-    background-color: #fff;
-    padding: 0px 20px;
-    border-radius: 4px;
 }
 
-/* .dashboard-form {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 4px;
-} */
-
-.el-form-item {
-    margin-bottom: 0px;
-    /* 移除默认边距，由父div控制 */
+.p-icon {
+    width: 48px;
+    height: 48px;
+    background: #eff6ff;
+    color: #3b82f6;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
 }
 
-/* 外层div负责边距，避免 el-form-item 的校验信息位置错误 */
-div>div {
-    margin-bottom: 18px;
+.status-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-div>.el-form-item {
-    margin-bottom: 0px;
+.status-badge.loaded {
+    background: #dcfce7;
+    color: #16a34a;
 }
 
-/* 数字输入框左对齐 */
-:deep(.el-input-number .el-input__inner) {
-    text-align: left;
+.status-badge.ignored {
+    background: #f1f5f9;
+    color: #64748b;
+}
+.status-badge.disabled {
+    background: #f1f5f9;
+    color: #e91d1d;
+}
+/* --- 5. 卡片主体 --- */
+.card-body {
+    flex: 1;
+}
+
+.title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.title-row h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.v-tag {
+    font-size: 11px;
+    font-family: 'Fira Code', monospace;
+    background: #f1f5f9;
+    color: #64748b;
+    padding: 2px 6px;
+    border-radius: 6px;
+}
+
+.author {
+    font-size: 12px;
+    color: #94a3b8;
+    margin: 0 0 12px 0;
+}
+
+.description {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.6;
+    /* 限制两行高度，超出省略号 */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    height: 42px;
+}
+
+/* --- 6. 卡片底部与配置按钮 --- */
+.card-footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.priority-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+/* 按钮样式补丁：彻底去除原生边框 */
+.config-action-btn {
+    background: #3b82f6;
+    color: #ffffff;
+    border: none !important;
+    outline: none !important;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s;
+}
+
+.config-action-btn:hover {
+    background: #2563eb;
+    transform: scale(1.02);
+}
+
+.config-action-btn:active {
+    transform: scale(0.98);
+}
+
+/* --- 7. 全面屏 Iframe 容器 --- */
+.iframe-view {
+    width: 100%;
+    height: calc(100vh - 160px);
+    /* 减去顶部栏和边距 */
+    background: #ffffff;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+.iframe-view iframe {
+    width: 100%;
+    height: 100%;
+}
+
+/* --- 8. 移动端响应式补丁 --- */
+@media (max-width: 640px) {
+    .section-intro h1 {
+        font-size: 20px;
+    }
+
+    .plugin-grid {
+        grid-template-columns: 1fr;
+        /* 手机端单列显示 */
+    }
+
+    .plugin-card {
+        padding: 20px;
+    }
 }
 </style>
-```

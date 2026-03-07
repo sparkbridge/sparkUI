@@ -1,13 +1,20 @@
 <template>
-  <div id="app">
-    <router-view></router-view>
-  </div>
+  <GlobalNotice />
+
+  <router-view></router-view>
 </template>
 
+<script setup>
+import GlobalNotice from './components/GlobalNotice.vue';
+</script>
 <style>
-/* 你可以添加一些全局样式 */
+/* 全局基础样式 */
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: sans-serif;
 }
 </style>

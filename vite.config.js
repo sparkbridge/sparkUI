@@ -1,29 +1,30 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { readFileSync } from 'fs';
 
-// https://vitejs.dev/config/
+// 读取 package.json 的内容
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
+
 export default defineConfig({
-  base: './',
   plugins: [vue()],
+  define: {
+    // 定义全局常量，注意字符串需要通过 JSON.stringify 处理
+    __APP_VERSION__: JSON.stringify(`v${packageJson.version}`),
+    // 也可以自动生成编译时间
+    __BUILD_TIME__: JSON.stringify(new Date().toLocaleString())
+  },
   server: {
     proxy: {
-      // 字符串简写写法
-      // '/foo': 'http://localhost:4567',
-      // 选项写法
+      // 将 /api 开头的请求代理到后端
       '/api': {
-        target: 'http://localhost:3000', // 代理的目标地址
-        changeOrigin: true, // 需要虚拟主机站点
-        // 如果你的后端接口路径没有 /api 前缀，可以用 rewrite 去掉
-        // rewrite: (path) => path.replace(/^\/api/, '') 
+        target: 'http://localhost:3001',
+        changeOrigin: true,
       },
-    },
-     // 【重要修改】在这里添加 build 配置
-     build: {
-      /**
-       * 指定生成静态资源的存放路径
-       * (相对于 build.outDir，即 dist 目录)
-       */
-      assetsDir: 'static'
+      // 将插件静态资源路径也进行代理
+      '/plugin-views': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      }
     }
   }
 })

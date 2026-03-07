@@ -1,105 +1,114 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import Layout from '../layouts/layout.vue' // 引入主布局组件
-import Login from '../views/Login.vue'
-import Register from '../views/Register.vue'
-import Dashboard from '../views/DashBoard.vue'
-import UserManagement from '../views/UserManagement.vue'
-import SystemLogs from '../views/SystemLogs.vue'
-import Chat from '../views/Chat.vue'
-import Showcase from '../views/ShowCase.vue'; 
-import PluginMarket from '../views/PluginMarket.vue'; // 引入新页面
-import RulesEngine from '../views/RulesEngine.vue';
-import NotFound from '../views/NotFound.vue'
+import { createRouter, createWebHistory } from 'vue-router';
+import { showNotice } from '../utils/notice';
+
+// 1. 定义页面组件 (建议使用动态导入以优化性能)
+const MainLayout = () => import('../layouts/MainLayout.vue');
+const Login = () => import('../views/Login.vue');
+const SystemOverview = () => import('../views/SystemOverview.vue');
+const Dashboard = () => import('../views/Dashboard.vue');
 
 const routes = [
-    // 登录和注册页面是独立的，不使用主布局
+    // 登录页：独立于外壳之外
     {
         path: '/login',
         name: 'Login',
-        component: Login
+        component: Login,
+        meta: { requiresAuth: false }
     },
-    {
-        path: '/register',
-        name: 'Register',
-        component: Register
-    },
-    // 所有需要导航栏的内部页面，都作为 Layout 的子路由
+
+    // 主布局外壳
     {
         path: '/',
-        component: Layout,
-        meta: { requiresAuth: true }, // 在父路由上添加认证守卫
-        redirect: '/dashboard', // 访问根路径时，默认重定向到仪表盘
+        component: MainLayout,
+        redirect: '/overview', // 默认进入概览页
         children: [
+            {
+                path: 'overview',
+                name: 'SystemOverview',
+                component: SystemOverview,
+                meta: { title: '系统概览', requiresAuth: true }
+            },
             {
                 path: 'dashboard',
                 name: 'Dashboard',
-                component: Dashboard
+                component: Dashboard,
+                meta: { title: '插件管理', requiresAuth: true }
             },
             {
-                path: 'user-management',
-                name: 'UserManagement',
-                component: UserManagement
+                path:"regexengine",
+                name: 'RegexEngine',
+                component: () => import('../views/RegexEngine.vue'),
+                meta: { title: '正则引擎', requiresAuth: true }
             },
             {
-                path: 'system-logs',
-                name: 'SystemLogs',
-                component: SystemLogs
-            },
-            {
-                path: 'chat',
-                name: 'Chat',
-                component: Chat
-            },
-            {
-                path: 'showcase',
-                name: 'Showcase',
-                component: Showcase
-              },
-            {
-                path: 'market',
-                name: 'PluginMarket',
-                component: PluginMarket
-              },
-            {
-                path: 'rules-engine',
-                name: 'RulesEngine',
-                component: RulesEngine
-              }
+                path: 'custom/:id',
+                name: 'CustomPage',
+                component: () => import('../views/CustomPageView.vue'),
+                meta: { title: '插件页面' }
+            }
         ]
     },
-    // 兜底路由保持不变
-    // {
-    //     path: '/:pathMatch(.*)*',
-    //     redirect: '/login'
-    // }
-    // ,
 
-    // 【重要修改】将通配符路由指向 NotFound 组件
-    // 这个路由必须在路由列表的【最后】
+    // 404 兜底 (可选)
     {
-        path: '/:pathMatch(.*)*', // 匹配所有未匹配到的路径
-        name: 'NotFound',
-        component: NotFound
+        path: '/:pathMatch(.*)*',
+        redirect: '/'
     }
-]
+];
 
 const router = createRouter({
     history: createWebHistory(),
-    routes
-})
-
-// 全局前置路由守卫保持不变
-router.beforeEach((to, from, next) => {
-    const loggedIn = localStorage.getItem('user-token');
-
-    if (to.meta.requiresAuth && !loggedIn) {
-        next('/login');
-    } else if ((to.name === 'Login' || to.name === 'Register') && loggedIn) {
-        next('/dashboard');
-    }
-    else {
-        next();
+    routes,
+    // 切换路由时自动滚动到顶部
+    scrollBehavior() {
+        return { top: 0 };
     }
 });
 
-export default router
+// src/router/index.js
+// src/router/index.js
+import { api } from '../api'; // 确保你引入了 api
+
+// 注意：参数里已经不需要写 next 了
+router.beforeEach(async (to, from) => {
+    const token = localStorage.getItem('sb3_token');
+
+    // 设置网页标题
+    if (to.meta.title) {
+        document.title = `${to.meta.title} - SparkBridge3`;
+    }
+
+    // 1. 访问登录页的处理
+    if (to.name === 'Login') {
+        if (token) {
+            // 如果已经有 token，直接重定向到概览页
+            return { name: 'SystemOverview' };
+        }
+        // 允许进入登录页
+        return true;
+    }
+
+    // 2. 访问受保护页面的处理
+    if (to.meta.requiresAuth !== false) {
+        // 没 token，直接踢回登录页
+        if (!token) {
+            return { name: 'Login' };
+        }
+
+        try {
+            // 向后端验证 token 有效性
+            await api.verifyToken();
+            // 验证通过，放行
+            return true;
+        } catch (err) {
+            // 验证失败：中断当前页面的进入动作
+            // 注意：具体的清空 token 和跳转 /login 的动作，已经在 request.js 的 axios 拦截器里做过了，这里只需要返回 false 阻止路由继续渲染即可。
+            return false;
+        }
+    }
+
+    // 3. 兜底放行（访问其他不需要权限的公共页面）
+    return true;
+});
+
+export default router;
