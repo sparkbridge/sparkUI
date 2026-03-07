@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { showNotice } from '../utils/notice';
+// import { showNotice } from '../utils/notice';
 
 // 1. 定义页面组件 (建议使用动态导入以优化性能)
 const MainLayout = () => import('../layouts/MainLayout.vue');
