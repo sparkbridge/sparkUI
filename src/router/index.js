@@ -5,7 +5,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 const MainLayout = () => import('../layouts/MainLayout.vue');
 const Login = () => import('../views/Login.vue');
 const SystemOverview = () => import('../views/SystemOverview.vue');
-const Dashboard = () => import('../views/Dashboard.vue');
+const Dashboard = () => import('../views/DashBoard.vue');
 
 const routes = [
     // 登录页：独立于外壳之外
