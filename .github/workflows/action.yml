@@ -1,0 +1,41 @@
+name: Build and Upload Vue App
+
+# 触发条件：当推送到 main 分支时触发
+on:
+  push:
+    branches:
+      - main  # 如果你的默认分支是 master，请把这里改成 master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. 配置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 建议使用 20 或 18，取决于你的本地开发环境
+          cache: 'npm'       # 自动开启 npm 缓存，大幅提升二次构建速度
+
+      # 3. 安装依赖
+      - name: Install dependencies
+        # 注意：如果你的项目没有 package-lock.json，请将 npm ci 替换为 npm install
+        # 如果你使用 pnpm，也可以换成 pnpm install
+        run: npm ci
+
+      # 4. 执行打包构建
+      - name: Build Vue project
+        run: npm run build
+
+      # 5. 上传打包产物
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-dist-package # 你下载时的压缩包名称
+          path: dist/            # Vue/Vite 默认的输出目录，如果你的输出目录叫 build，请修改这里
+          retention-days: 7      # 产物保留天数 (GitHub 免费额度有限，建议只保留几天用于测试或部署)
