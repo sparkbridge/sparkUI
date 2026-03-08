@@ -167,7 +167,8 @@ const actionOptions = [
     { label: '发送消息', value: 'replyText' },
     { label: '撤回消息', value: 'deleteMessage' },
     { label: '禁言用户', value: 'muteUser' },
-    {label:'执行命令', value:'executeCommand'}
+    {label:'执行命令', value:'executeCommand'},
+    {label:'调用插件命令', value:'callPluginCommand'}
 ];
 
 

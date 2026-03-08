@@ -241,7 +241,58 @@ const fetchAnnouncements = async () => {
     }
 };
 
-// 检测更新方法 (isSilent: 是否为静默检测)
+// // 检测更新方法 (isSilent: 是否为静默检测)
+// const checkUpdate = async (isSilent = false) => {
+//     updateInfo.isChecking = true;
+//     try {
+//         const res = await fetch(LATEST_VERSION_URL);
+//         if (!res.ok) throw new Error('网络响应错误');
+
+//         const resData = await res.json();
+//         // 假设接口返回 { data: { version: '1.0.5' } } 或 { version: '1.0.5' }
+//         const latestVer = resData.data?.version || resData.version;
+
+//         if (latestVer) {
+//             updateInfo.latest = latestVer;
+//             // 简单的版本比对 (只要不一样就认为有更新，你也可以引入 semver 库做精确比对)
+//             updateInfo.hasUpdate = latestVer !== updateInfo.current;
+//         } else {
+//             throw new Error('未获取到版本号字段');
+//         }
+//     } catch (error) {
+//         if (!isSilent) console.warn('版本检测失败，当作最新版本处理', error);
+//         // 降级处理：获取失败时，将最新版本置为当前版本，显示“已为最新”
+//         updateInfo.latest = updateInfo.current;
+//         updateInfo.hasUpdate = false;
+//     } finally {
+//         updateInfo.isChecking = false;
+//     }
+// };
+
+// 版本对比辅助函数：判断 latest 是否大于 current
+const compareVersion = (latest, current) => {
+    if (!latest || !current) return false;
+
+    // 剔除可能存在的 'v' 或 'V' 前缀，并按 '.' 拆分为数字数组
+    const v1 = latest.replace(/^v/i, '').split('.').map(Number);
+    const v2 = current.replace(/^v/i, '').split('.').map(Number);
+
+    // 取两个版本号的最大长度（兼容 1.0 和 1.0.1 这种位数不一致的情况）
+    const len = Math.max(v1.length, v2.length);
+
+    for (let i = 0; i < len; i++) {
+        // 如果该位不存在（比如 1.0 的第三位），则默认用 0 补齐比对
+        const num1 = v1[i] || 0;
+        const num2 = v2[i] || 0;
+
+        if (num1 > num2) return true;  // latest 大于 current，需要更新
+        if (num1 < num2) return false; // latest 小于 current，无需更新
+        // 如果相等，则进入下一轮循环比对下一位数字
+    }
+
+    return false; // 完全相等，无需更新
+};
+
 const checkUpdate = async (isSilent = false) => {
     updateInfo.isChecking = true;
     try {
@@ -249,13 +300,13 @@ const checkUpdate = async (isSilent = false) => {
         if (!res.ok) throw new Error('网络响应错误');
 
         const resData = await res.json();
-        // 假设接口返回 { data: { version: '1.0.5' } } 或 { version: '1.0.5' }
+        // 获取接口返回的最新版本号
         const latestVer = resData.data?.version || resData.version;
 
         if (latestVer) {
             updateInfo.latest = latestVer;
-            // 简单的版本比对 (只要不一样就认为有更新，你也可以引入 semver 库做精确比对)
-            updateInfo.hasUpdate = latestVer !== updateInfo.current;
+            // 使用精确的版本号大小对比，替代简单的字符串不相等判断
+            updateInfo.hasUpdate = compareVersion(latestVer, updateInfo.current);
         } else {
             throw new Error('未获取到版本号字段');
         }
