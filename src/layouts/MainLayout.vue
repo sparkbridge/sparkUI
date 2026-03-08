@@ -89,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue'; // 新增引入 onUnmounted
 import { useRouter, useRoute } from 'vue-router';
 import {
     LayoutGridIcon, MonitorIcon, LogOutIcon,
@@ -112,7 +112,6 @@ const currentRouteName = computed(() => {
     if (route.path === '/overview') return '系统状态';
     if (route.path === '/regexengine') return '规则引擎';
 
-    // 如果是动态插件页面，提取其标题
     // 如果是动态插件页面 (判断路径是否以 /custom/ 开头)
     if (route.path.startsWith('/custom/')) {
         // 提取出 URL 最后的 id (例如 sb3_regex_1772713017502)
@@ -129,7 +128,6 @@ const currentRouteName = computed(() => {
 const fetchSidebarData = async () => {
     try {
         const res = await api.getCustomPages();
-        // consoole.log(res.data);
         customPages.value = Array.isArray(res.data) ? res.data : [];
         console.log(res.data[0]);
     } catch (err) {
@@ -149,7 +147,34 @@ const handleLogout = () => {
     router.push('/login');
 };
 
-onMounted(fetchSidebarData);
+// ==========================================
+// 新增：处理 iframe 插件传来的 Token 获取请求
+// ==========================================
+const handleIframeMessage = (event) => {
+    if (event.data && event.data.action === 'GET_SB3_TOKEN') {
+        // 注意：这里读取的 key 是 'sb3_token'，与你退出登录时的 key 保持一致
+        const token = localStorage.getItem('sb3_token') || '';
+
+        if (event.source) {
+            const targetOrigin = event.origin !== 'null' ? event.origin : '*';
+            event.source.postMessage({
+                action: 'SB3_TOKEN',
+                payload: { token: token }
+            }, targetOrigin);
+        }
+    }
+};
+
+onMounted(() => {
+    fetchSidebarData();
+    // 挂载时添加 message 监听
+    window.addEventListener('message', handleIframeMessage);
+});
+
+// 新增：组件卸载时移除监听，防止内存泄漏
+onUnmounted(() => {
+    window.removeEventListener('message', handleIframeMessage);
+});
 </script>
 
 <style scoped>

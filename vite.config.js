@@ -17,12 +17,12 @@ export default defineConfig({
     proxy: {
       // 将 /api 开头的请求代理到后端
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:3002',
         changeOrigin: true,
       },
       // 将插件静态资源路径也进行代理
       '/plugin-views': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:3002',
         changeOrigin: true,
       }
     }
