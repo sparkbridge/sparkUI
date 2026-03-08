@@ -165,6 +165,7 @@ const operatorOptions = [
 
 const actionOptions = [
     { label: '发送消息', value: 'replyText' },
+    { label: '发送图片', value: 'replyImage' },
     { label: '撤回消息', value: 'deleteMessage' },
     { label: '禁言用户', value: 'muteUser' },
     {label:'执行命令', value:'executeCommand'},
