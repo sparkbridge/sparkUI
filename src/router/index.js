@@ -7,6 +7,8 @@ const Login = () => import('../views/Login.vue');
 const SystemOverview = () => import('../views/SystemOverview.vue');
 const Dashboard = () => import('../views/DashBoard.vue');
 
+const PluginUpload = () => import('../views/PluginUpload.vue');
+
 const routes = [
     // 登录页：独立于外壳之外
     {
@@ -33,6 +35,12 @@ const routes = [
                 name: 'Dashboard',
                 component: Dashboard,
                 meta: { title: '插件管理', requiresAuth: true }
+            },
+            {
+                path: 'pluginupload',
+                name: 'PluginUpload',
+                component: PluginUpload,
+                meta: { title: '插件安装器', requiresAuth: true }
             },
             {
                 path:"regexengine",

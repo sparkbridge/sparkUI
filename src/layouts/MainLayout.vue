@@ -23,6 +23,11 @@
                         <LayoutGridIcon :size="18" />
                         <span>插件中心</span>
                     </button>
+                    <button class="menu-item" :class="{ active: $route.path === '/pluginupload' }"
+                        @click="navTo('/pluginupload')">
+                        <BlocksIcon :size="18" />
+                        <span>上传插件</span>
+                    </button>
                     <button class="menu-item" :class="{ active: $route.path === '/regexengine' }"
                         @click="navTo('/regexengine')">
                         <WorkflowIcon :size="18" />
@@ -93,7 +98,7 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'; // 新增引入 onU
 import { useRouter, useRoute } from 'vue-router';
 import {
     LayoutGridIcon, MonitorIcon, LogOutIcon,
-    MenuIcon, ShieldCheckIcon, LayoutDashboardIcon, ZapIcon, WorkflowIcon
+    MenuIcon, ShieldCheckIcon, LayoutDashboardIcon, ZapIcon, WorkflowIcon, BlocksIcon
 } from 'lucide-vue-next';
 import { api } from '../api';
 import { showNotice } from '../utils/notice';
@@ -111,6 +116,7 @@ const currentRouteName = computed(() => {
     if (route.path === '/dashboard') return '插件管理';
     if (route.path === '/overview') return '系统状态';
     if (route.path === '/regexengine') return '规则引擎';
+    if (route.path === '/pluginupload') return '上传插件';
 
     // 如果是动态插件页面 (判断路径是否以 /custom/ 开头)
     if (route.path.startsWith('/custom/')) {
