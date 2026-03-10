@@ -85,5 +85,9 @@ export const api = {
     saveRegexRules:(data)=>{
         return request.post('/plugin/regexengine/save',data);
     },
+
+    installPlugin: (url) => {
+        return request.post(`/plugins/task/download`,{url});
+    },
     
 };
