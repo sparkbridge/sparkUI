@@ -38,6 +38,11 @@
                         <WorkflowIcon :size="18" />
                         <span>规则引擎</span>
                     </button>
+                    <button class="menu-item" :class="{ active: $route.path === '/logs' }"
+                        @click="navTo('/logs')">
+                        <TerminalSquareIcon :size="18" />
+                        <span>系统日志</span>
+                    </button>
                 </div>
 
                 <div class="nav-group" v-if="customPages.length > 0">
@@ -103,7 +108,13 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'; // 新增引入 onU
 import { useRouter, useRoute } from 'vue-router';
 import {
     LayoutGridIcon, MonitorIcon, LogOutIcon,
-    MenuIcon, ShieldCheckIcon, LayoutDashboardIcon, ZapIcon, WorkflowIcon, BlocksIcon,StoreIcon
+    MenuIcon, ShieldCheckIcon, 
+    LayoutDashboardIcon, ZapIcon, WorkflowIcon, 
+    BlocksIcon,StoreIcon, TerminalIcon,
+    ScrollTextIcon,  // 备选
+    ArrowDownIcon,
+    Trash2Icon,
+    TerminalSquareIcon
 } from 'lucide-vue-next';
 import { api } from '../api';
 import { showNotice } from '../utils/notice';
@@ -123,6 +134,7 @@ const currentRouteName = computed(() => {
     if (route.path === '/regexengine') return '规则引擎';
     if (route.path === '/pluginupload') return '上传插件';
     if(route.path == '/pluginstore') return '插件商店';
+    if(route.path == '/logs') return '系统日志';
 
     // 如果是动态插件页面 (判断路径是否以 /custom/ 开头)
     if (route.path.startsWith('/custom/')) {

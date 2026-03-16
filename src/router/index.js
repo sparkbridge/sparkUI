@@ -59,6 +59,12 @@ const routes = [
                 name: 'CustomPage',
                 component: () => import('../views/CustomPageView.vue'),
                 meta: { title: '插件页面' }
+            },
+            {
+                path: 'logs',
+                name: 'Logs',
+                component: () => import('../views/SystemLog.vue'),
+                meta: { title: '系统日志' }
             }
         ]
     },
