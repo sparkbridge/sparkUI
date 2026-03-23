@@ -25,24 +25,23 @@
             </div>
 
             <UiSelect v-model="selectedAuthor" :options="authorOptions" width="200px" class="filter-select" />
-
             <UiSelect v-model="selectedTag" :options="tagOptions" width="200px" class="filter-select" />
         </div>
 
         <div class="plugin-grid" v-if="filteredPlugins.length > 0">
-            <div v-for="plugin in filteredPlugins" :key="plugin.name" class="plugin-card">
+            <div v-for="plugin in filteredPlugins" :key="plugin.name" class="plugin-card"
+                @click="handleOpenDetail(plugin)">
 
                 <div class="card-head">
                     <div class="p-icon">
-                        <PackageIcon :size="24" stroke-width="1.5" />
+                        <img v-if="plugin.icon" :src="plugin.icon" :alt="plugin.name" class="plugin-img" />
+                        <span v-else class="fallback-icon">{{ plugin.name.charAt(0).toUpperCase() }}</span>
                     </div>
 
-                    <div v-if="plugin.localState === 'core'" class="status-badge core">核心保护</div>
-                    <div v-else-if="plugin.localState === 'update'" class="status-badge update">可更新</div>
-                    <div v-else-if="plugin.localState === 'installed'" class="status-badge installed">
-                        <CheckIcon :size="12" style="margin-right: 2px;" /> 已安装
+                    <div :class="['status-badge', plugin.localState]">
+                        <CheckIcon v-if="plugin.localState === 'installed'" :size="12" style="margin-right: 2px;" />
+                        {{ getStatusLabel(plugin.localState) }}
                     </div>
-                    <div v-else class="status-badge not-installed">未安装</div>
                 </div>
 
                 <div class="card-body">
@@ -55,7 +54,7 @@
                         <span class="v-tag" v-else>v{{ plugin.version }}</span>
                     </div>
 
-                    <p class="author" @click="selectedAuthor = plugin.author" title="点击筛选该作者">
+                    <p class="author" @click.stop="selectedAuthor = plugin.author">
                         <UserIcon :size="12" class="author-icon" />
                         {{ plugin.author }}
                     </p>
@@ -63,38 +62,33 @@
                     <p class="description">{{ plugin.desc }}</p>
 
                     <div class="tags-group">
-                        <span v-for="tag in plugin.tags" :key="tag" class="small-tag" @click="selectedTag = tag"
-                            title="点击筛选该标签">
+                        <span v-for="tag in plugin.tags" :key="tag" class="small-tag" @click.stop="selectedTag = tag">
                             {{ tag }}
                         </span>
                     </div>
                 </div>
 
                 <div class="card-footer">
-                    <a :href="plugin.repo" target="_blank" class="icon-btn" title="查看源码仓库">
+                    <a v-if="plugin.repo" :href="plugin.repo" target="_blank" class="icon-btn" @click.stop>
                         <GithubIcon :size="18" />
                     </a>
+                    <div v-else class="icon-placeholder"></div>
 
                     <div class="action-group">
                         <button v-if="plugin.localState === 'core'" class="btn-disabled" disabled>系统内置</button>
                         <button v-else-if="plugin.localState === 'installed'" class="action-btn btn-danger"
-                            @click="handleUninstall(plugin)">
+                            @click.stop="handleUninstall(plugin)">
                             <Trash2Icon :size="14" /> 卸载
-                        </button>
-                        <button v-else-if="plugin.localState === 'update'" class="action-btn btn-primary"
-                            @click="handleUpdate(plugin)">
-                            <RefreshCwIcon :size="14" /> 更新
                         </button>
                         <button v-else class="action-btn btn-primary"
                             :class="{ 'is-loading': installStates[plugin.name]?.isLoading }"
-                            :disabled="installStates[plugin.name]?.isLoading" @click="handleInstall(plugin)">
+                            :disabled="installStates[plugin.name]?.isLoading" @click.stop="handleInstall(plugin)">
                             <Loader2Icon v-if="installStates[plugin.name]?.isLoading" :size="14" class="spin-icon" />
                             <CloudDownloadIcon v-else :size="14" />
-                            {{ installStates[plugin.name]?.text || '获取 / 安装' }}
+                            {{ installStates[plugin.name]?.text || (plugin.localState === 'update' ? '更新' : '安装') }}
                         </button>
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -103,230 +97,137 @@
                 <SearchXIcon :size="48" />
             </div>
             <h3>未找到相关插件</h3>
-            <p>没有找到符合当前筛选条件的插件，请尝试更换关键词或分类。</p>
-            <button class="reset-filter-btn" @click="resetFilters">重置所有筛选</button>
+            <button class="reset-filter-btn" @click="resetFilters">重置筛选</button>
         </div>
+
+        <PluginDetailModal :is-open="detailVisible" :plugin="currentDetail" @close="detailVisible = false"
+            @install="handleInstallFromDetail" />
     </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import {
-    PackageIcon, CloudDownloadIcon, RefreshCwIcon, Trash2Icon,
-    GithubIcon, UserIcon, ArrowRightIcon, GlobeIcon, CheckIcon, Loader2Icon,
-    SearchIcon, SearchXIcon
+    CloudDownloadIcon, RefreshCwIcon, Trash2Icon, GithubIcon, UserIcon,
+    ArrowRightIcon, GlobeIcon, CheckIcon, Loader2Icon, SearchIcon, SearchXIcon
 } from 'lucide-vue-next';
 import { showNotice } from '../utils/notice';
 import UiSelect from '../components/UiSelect.vue';
+import PluginDetailModal from '../components/PluginDetailModal.vue';
 
-// ================= 状态数据 =================
+// --- 数据状态 ---
 const installedPlugins = ref({});
 const remotePlugins = ref([]);
 const installStates = ref({});
+const detailVisible = ref(false);
+const currentDetail = ref(null);
 let pollTimer = null;
 
-// --- 筛选栏状态 ---
 const searchQuery = ref('');
 const selectedTag = ref('all');
 const selectedAuthor = ref('all');
+const selectedProxy = ref('https://gh-proxy.com/');
+const proxyOptions = [
+    { label: '🚀 直连', value: '' },
+    { label: '官方加速 (gh-proxy.com)', value: 'https://gh-proxy.com/' }
+];
 
-// --- 代理节点状态 ---
-const selectedProxy = ref('');
-const proxyOptions = ref([
-    { label: '🚀 直连 (不使用代理)', value: '' }
-]);
-
-// ================= Mock 数据区 =================
-const remoteRegistry = [];
-
-// ================= 助手函数 =================
-const formatVer = (v) => Array.isArray(v) ? v.join('.') : (v || '0.0.0');
-
-const compareVer = (v1, v2) => {
-    const parts1 = v1.split('.').map(Number);
-    const parts2 = v2.split('.').map(Number);
-    const len = Math.max(parts1.length, parts2.length);
-    for (let i = 0; i < len; i++) {
-        const num1 = parts1[i] || 0;
-        const num2 = parts2[i] || 0;
-        if (num1 > num2) return 1;
-        if (num1 < num2) return -1;
-    }
-    return 0;
-};
-
+// --- 逻辑处理 ---
 const getToken = () => localStorage.getItem('sb3_token') || localStorage.getItem('user-token') || '';
+const formatVer = (v) => Array.isArray(v) ? v.join('.') : (v || '0.0.0');
+const getStatusLabel = (s) => ({ core: '核心保护', update: '可更新', installed: '已安装', not_installed: '未安装' }[s]);
 
-// ================= 核心逻辑 =================
-
-const fetchProxyList = async () => {
+const fetchAllData = async () => {
     try {
-        const mockApiProxies = [
-            { name: '官方优选节点 (gh-proxy.com)', url: 'https://gh-proxy.com/' },
-            { name: '备用加速节点 (moeyy.xyz)', url: 'https://github.moeyy.xyz/' }
-        ];
-
-        const formattedProxies = mockApiProxies.map(p => ({
-            label: p.name,
-            value: p.url
-        }));
-
-        proxyOptions.value = [
-            { label: '🚀 直连 (不使用代理)', value: '' },
-            ...formattedProxies
-        ];
-
-        if (formattedProxies.length > 0) {
-            selectedProxy.value = formattedProxies[0].value;
+        const [localRes, remoteRes] = await Promise.all([
+            fetch('/api/plugins/list', { headers: { 'Authorization': `Bearer ${getToken()}` } }).then(r => r.json()),
+            fetch('https://lition.top/api/v1/plugins').then(r => r.json())
+        ]);
+        if (localRes.code === 200) installedPlugins.value = localRes.data;
+        if (remoteRes.code === 200) {
+            remotePlugins.value = remoteRes.data;
+            remoteRes.data.forEach(p => {
+                if (!installStates.value[p.name]) {
+                    installStates.value[p.name] = { isLoading: false, text: '' };
+                }
+            });
         }
-    } catch (error) {
-        console.error('获取代理列表失败:', error);
-    }
+    } catch (e) { showNotice('同步插件数据失败', 'error'); }
 };
 
-const fetchLocalPlugins = async () => {
-    try {
-        const res = await fetch('/api/plugins/list', {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${getToken()}` }
-        });
-        const resData = await res.json();
+onMounted(fetchAllData);
 
-        if (resData.code === 200) {
-            installedPlugins.value = resData.data;
-        } else {
-            installedPlugins.value = {};
-        }
-    } catch (error) {
-        installedPlugins.value = {};
-    }
-};
-
-const fetchRemotePlugins = async () => { 
-    try {
-        const res = await fetch('https://sparkbridge.cn/store/index.json', {
-            method: 'GET',
-        });
-        const resData = await res.json();
-        console.log(resData);
-
-        remotePlugins.value = resData;
-    } catch (error) {
-        remotePlugins.value = [];
-    }
-};
-
-onMounted(async () => {
-    await fetchProxyList();
-    await fetchLocalPlugins();
-    await fetchRemotePlugins();
-    remotePlugins.value.forEach(p => {
-        installStates.value[p.name] = { isLoading: false, text: '获取 / 安装' };
-    });
-});
-
-// --- 将提取的数组动态转化为 UiSelect 需要的 [{label, value}] 对象格式 ---
-const availableTags = computed(() => {
-    const rawTags = Array.from(new Set(remotePlugins.value.flatMap(p => p.tags || []))).sort();
-    return rawTags;
-});
-
-const tagOptions = computed(() => {
-    const options = [{ label: '🏷️ 所有分类标签', value: 'all' }];
-    availableTags.value.forEach(tag => {
-        options.push({ label: `🏷️ ${tag}`, value: tag });
-    });
-    return options;
-});
-
-const availableAuthors = computed(() => {
-    const rawAuthors = Array.from(new Set(remotePlugins.value.map(p => p.author).filter(Boolean))).sort();
-    return rawAuthors;
-});
-
-const authorOptions = computed(() => {
-    const options = [{ label: '👥 所有作者', value: 'all' }];
-    availableAuthors.value.forEach(author => {
-        options.push({ label: `👤 ${author}`, value: author });
-    });
-    return options;
-});
-// --------------------------------------------------------------------------
-
+// --- 筛选与状态计算 ---
 const storePlugins = computed(() => {
     return remotePlugins.value.map(remote => {
         const local = installedPlugins.value[remote.name];
         let localState = 'not_installed', localVersion = '0.0.0';
-
         if (local) {
             localVersion = formatVer(local.info.version);
             if (local.virtual) localState = 'core';
-            else if (compareVer(remote.version, localVersion) > 0) localState = 'update';
+            else if (remote.version !== localVersion) localState = 'update';
             else localState = 'installed';
         }
         return { ...remote, localState, localVersion };
     });
 });
 
-const filteredPlugins = computed(() => {
-    return storePlugins.value.filter(p => {
-        const q = searchQuery.value.toLowerCase();
-        const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.desc && p.desc.toLowerCase().includes(q));
-        const matchTag = selectedTag.value === 'all' || (p.tags && p.tags.includes(selectedTag.value));
-        const matchAuthor = selectedAuthor.value === 'all' || p.author === selectedAuthor.value;
-        return matchSearch && matchTag && matchAuthor;
-    });
-});
+const filteredPlugins = computed(() => storePlugins.value.filter(p => {
+    const q = searchQuery.value.toLowerCase();
+    const mSearch = !q || p.name.toLowerCase().includes(q) || (p.desc && p.desc.toLowerCase().includes(q));
+    const mTag = selectedTag.value === 'all' || p.tags?.includes(selectedTag.value);
+    const mAuth = selectedAuthor.value === 'all' || p.author === selectedAuthor.value;
+    return mSearch && mTag && mAuth;
+}));
 
-const resetFilters = () => {
-    searchQuery.value = '';
-    selectedTag.value = 'all';
-    selectedAuthor.value = 'all';
+// --- 弹窗逻辑 ---
+const handleOpenDetail = async (plugin) => {
+    currentDetail.value = { ...plugin, loading: true };
+    detailVisible.value = true;
+    try {
+        const res = await fetch(`https://lition.top/api/v1/plugins/${plugin.name}`).then(r => r.json());
+        if (res.code === 200) currentDetail.value = { ...currentDetail.value, ...res.data, loading: false };
+    } catch (e) { currentDetail.value.loading = false; }
 };
 
-// ================= 网络任务流操作 =================
+const handleInstallFromDetail = (plugin) => {
+    detailVisible.value = false;
+    handleInstall(plugin);
+};
 
+// --- 安装核心逻辑 ---
 const handleInstall = async (plugin) => {
     const state = installStates.value[plugin.name];
-    if (state.isLoading) return;
-
     state.isLoading = true;
-    state.text = '准备下载...';
-
-    let finalUrl = plugin.downloadUrl;
-    const isGithubLink = /^https?:\/\/(github\.com|raw\.githubusercontent\.com)/i.test(finalUrl);
-
-    if (isGithubLink && selectedProxy.value) {
-        const prefix = selectedProxy.value.endsWith('/') ? selectedProxy.value : selectedProxy.value + '/';
-        finalUrl = prefix + finalUrl;
-    }
-
+    state.text = '解析中...';
     try {
+        const dRes = await fetch(`https://lition.top/api/v1/plugins/${plugin.name}`).then(r => r.json());
+        let downloadUrl = dRes.data.downloadUrl;
+        if (selectedProxy.value && downloadUrl.includes('github.com')) {
+            downloadUrl = selectedProxy.value + downloadUrl;
+        }
+        downloadUrl = `https://lition.top/api/v1/plugins/${plugin.name}/download`;
+        // console.log(downloadUrl);
         const res = await fetch('/api/plugins/task/download', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
-            body: JSON.stringify({ url: finalUrl })
-        });
+            body: JSON.stringify({ url: downloadUrl })
+        }).then(r => r.json());
 
-        const resData = await res.json();
-
-        if (resData.code === 200) {
-            startPolling(plugin.name, resData.data.taskId);
-        } else if (resData.code === 409) {
-            showNotice('系统正在安装其他插件，已接管进度', 'info');
-            startPolling(plugin.name, resData.data.runningTaskId);
-        } else {
-            throw new Error(resData.msg || '提交下载任务失败');
-        }
-    } catch (error) {
-        showNotice(error.message || '网络异常，提交失败', 'error');
+        if (res.code === 200) startPolling(plugin.name, res.data.taskId);
+    } catch (e) {
         state.isLoading = false;
-        state.text = '获取 / 安装';
+        showNotice('安装请求失败', 'error');
     }
 };
 
 const startPolling = (pluginName, taskId) => {
-    if (pollTimer) clearInterval(pollTimer);
+    // 1. 如果已有定时器，先清理，防止叠加
+    if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+    }
+
     const state = installStates.value[pluginName];
 
     pollTimer = setInterval(async () => {
@@ -334,57 +235,75 @@ const startPolling = (pluginName, taskId) => {
             const res = await fetch(`/api/plugins/task/status/${taskId}`, {
                 headers: { 'Authorization': `Bearer ${getToken()}` }
             });
+
+            // 如果请求本身失败（如 401 或 500）
+            if (!res.ok) {
+                throw new Error(`服务器响应异常: ${res.status}`);
+            }
+
             const resData = await res.json();
 
+            // 2. 只有 code 为 200 才处理逻辑
             if (resData.code === 200 && resData.data) {
                 const data = resData.data;
-                const progress = data.progress !== undefined ? data.progress : 0;
+                const progress = data.progress || 0;
 
+                // 更新 UI 文字
                 const actionName = data.status === 'extracting' ? '解压中' : (data.status === 'installing' ? '安装中' : '下载中');
                 state.text = `${actionName} ${progress}%`;
 
-                if (data.status === 'success' || data.status === 'error') {
-                    clearInterval(pollTimer);
-                    pollTimer = null;
-                    state.isLoading = false;
+                // 3. 核心修复：一旦进入终态（成功或失败），立即清除定时器
+                if (data.status === 'success' || data.status === 'error' || data.status === 'failed') {
+                    stopAndCleanup(pluginName);
 
                     if (data.status === 'success') {
                         state.text = '安装成功';
                         showNotice(`插件 ${pluginName} 安装成功！`, 'success');
-                        await fetchLocalPlugins();
+                        await fetchAllData(); // 刷新本地列表
                     } else {
                         state.text = '安装失败';
-                        showNotice(data.errorDetail || resData.msg || '安装过程发生错误', 'error');
+                        showNotice('插件安装失败：'+ data.errorDetail, 'error');
                     }
                 }
+            } else {
+                // 如果后端返回 code 报错（如任务 ID 不存在）
+                throw new Error(resData.msg || '获取任务状态失败');
             }
-        } catch (error) { console.warn('轮询进度失败，继续重试...', error); }
+        } catch (error) {
+            // 4. 重点：请求报错或解析报错时，也必须停止轮询，否则会无限报错
+            console.error('轮询任务状态出错:', error);
+            stopAndCleanup(pluginName);
+            state.text = '获取失败';
+            showNotice(`状态追踪已中断: ${error.message}`, 'error');
+        }
     }, 1000);
 };
 
-const handleUpdate = (plugin) => handleInstall(plugin);
-
-const handleUninstall = async (plugin) => {
-    // if (confirm(`确定要卸载插件 ${plugin.name} 吗？\n注意：相关的配置文件也会被删除。`)) {
-    //     try {
-    //         const res = await fetch(`/api/plugins/uninstall/${plugin.name}`, {
-    //             method: 'DELETE',
-    //             headers: { 'Authorization': `Bearer ${getToken()}` }
-    //         });
-    //         showNotice(`已成功卸载插件: ${plugin.name}`, 'success');
-    //         await fetchLocalPlugins();
-    //     } catch (err) {
-    //         showNotice('卸载失败', 'error');
-    //     }
-    // }
-    showNotice('功能开发中...，请您手动卸载', 'info')
+// 辅助清理函数
+const stopAndCleanup = (name) => {
+    if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+    }
+    if (installStates.value[name]) {
+        installStates.value[name].isLoading = false;
+    }
 };
+
+// --- 选项生成 ---
+const authorOptions = computed(() => [{ label: '👥 所有作者', value: 'all' }, ...Array.from(new Set(remotePlugins.value.map(p => p.author))).map(a => ({ label: `👤 ${a}`, value: a }))]);
+const tagOptions = computed(() => [{ label: '🏷️ 所有标签', value: 'all' }, ...Array.from(new Set(remotePlugins.value.flatMap(p => p.tags || []))).map(t => ({ label: `🏷️ ${t}`, value: t }))]);
+const resetFilters = () => { searchQuery.value = ''; selectedTag.value = 'all'; selectedAuthor.value = 'all'; };
+const handleUninstall = () => showNotice('请在“已安装”页面管理', 'info');
 </script>
 
 <style scoped>
+/* ==========================================
+   1. 基础布局与动画
+   ========================================== */
 .dashboard-content {
     animation: fadeIn 0.4s ease-out;
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
     padding-bottom: 40px;
 }
@@ -401,7 +320,9 @@ const handleUninstall = async (plugin) => {
     }
 }
 
-/* ================= Header 布局 ================= */
+/* ==========================================
+   2. Header 头部区域
+   ========================================== */
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -411,12 +332,8 @@ const handleUninstall = async (plugin) => {
     gap: 20px;
 }
 
-.section-intro {
-    margin-bottom: 0;
-}
-
 .section-intro h1 {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 800;
     color: #1e293b;
     margin: 0 0 8px 0;
@@ -461,7 +378,9 @@ const handleUninstall = async (plugin) => {
     padding-right: 4px;
 }
 
-/* ================= 筛选栏 ================= */
+/* ==========================================
+   3. 筛选栏 Filter Bar
+   ========================================== */
 .filter-bar {
     display: flex;
     flex-wrap: wrap;
@@ -499,7 +418,7 @@ const handleUninstall = async (plugin) => {
 
 .search-box {
     flex: 1;
-    min-width: 200px;
+    min-width: 240px;
 }
 
 .search-box input {
@@ -512,19 +431,9 @@ const handleUninstall = async (plugin) => {
     outline: none;
 }
 
-/* --- 覆盖 UiSelect 以完美对齐左侧输入框高度 --- */
-.filter-select {
-    flex-shrink: 0;
-}
-
-:deep(.filter-select .select-trigger) {
-    min-height: 44px;
-    /* 精确匹配左侧搜索框的实际物理高度 */
-    padding: 10px 16px;
-    font-size: 14px;
-}
-
-/* ================= 插件网格 ================= */
+/* ==========================================
+   4. 插件网格与卡片
+   ========================================== */
 .plugin-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -539,38 +448,54 @@ const handleUninstall = async (plugin) => {
     display: flex;
     flex-direction: column;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
 }
 
 .plugin-card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-5px);
     box-shadow: 0 12px 30px rgba(59, 130, 246, 0.08);
-    border-color: #93c5fd;
+    border-color: #3b82f6;
 }
 
+/* 头部图标与状态 */
 .card-head {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 16px;
 }
 
 .p-icon {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     background: #eff6ff;
     color: #3b82f6;
-    border-radius: 12px;
+    border-radius: 14px;
     display: grid;
     place-items: center;
+    overflow: hidden;
+    border: 1px solid #dbeafe;
 }
 
+.plugin-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.fallback-icon {
+    font-size: 22px;
+    font-weight: 800;
+    color: #3b82f6;
+}
+
+/* 状态标签配色 */
 .status-badge {
     font-size: 11px;
     font-weight: 700;
     padding: 4px 10px;
     border-radius: 8px;
-    display: flex;
-    align-items: center;
 }
 
 .status-badge.core {
@@ -591,16 +516,13 @@ const handleUninstall = async (plugin) => {
     border: 1px solid #bbf7d0;
 }
 
-.status-badge.not-installed {
+.status-badge.not_installed {
     background: #f1f5f9;
     color: #64748b;
     border: 1px solid #e2e8f0;
 }
 
-.card-body {
-    flex: 1;
-}
-
+/* 卡片内容 */
 .title-row {
     display: flex;
     align-items: center;
@@ -609,7 +531,7 @@ const handleUninstall = async (plugin) => {
 }
 
 .title-row h3 {
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 700;
     color: #0f172a;
     margin: 0;
@@ -622,7 +544,7 @@ const handleUninstall = async (plugin) => {
     color: #475569;
     padding: 2px 6px;
     border-radius: 6px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 4px;
 }
@@ -635,7 +557,6 @@ const handleUninstall = async (plugin) => {
     align-items: center;
     gap: 4px;
     font-weight: 500;
-    cursor: pointer;
     transition: color 0.2s;
 }
 
@@ -647,12 +568,12 @@ const handleUninstall = async (plugin) => {
     font-size: 13px;
     color: #64748b;
     line-height: 1.6;
-    margin: 0 0 12px 0;
+    margin-bottom: 16px;
+    height: 42px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    height: 42px;
 }
 
 .tags-group {
@@ -668,16 +589,13 @@ const handleUninstall = async (plugin) => {
     padding: 2px 8px;
     border-radius: 10px;
     font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
 }
 
-.small-tag:hover {
-    background: #dbeafe;
-}
-
+/* ==========================================
+   5. Card Footer 卡片页脚
+   ========================================== */
 .card-footer {
-    margin-top: 20px;
+    margin-top: auto;
     padding-top: 16px;
     border-top: 1px solid #f8fafc;
     display: flex;
@@ -687,11 +605,11 @@ const handleUninstall = async (plugin) => {
 
 .icon-btn {
     color: #94a3b8;
-    display: grid;
-    place-items: center;
-    padding: 6px;
+    padding: 8px;
     border-radius: 8px;
     transition: 0.2s;
+    display: grid;
+    place-items: center;
 }
 
 .icon-btn:hover {
@@ -699,34 +617,33 @@ const handleUninstall = async (plugin) => {
     background: #f1f5f9;
 }
 
-.action-group {
-    display: flex;
-    gap: 8px;
-}
-
 .action-btn {
     border: none;
     outline: none;
-    padding: 8px 16px;
+    padding: 9px 18px;
     border-radius: 10px;
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 6px;
-    transition: 0.2s;
+    gap: 8px;
+    transition: all 0.2s;
 }
 
 .btn-primary {
     background: #3b82f6;
-    color: white;
+    color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
     background: #2563eb;
-    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.btn-primary:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
 }
 
 .btn-danger {
@@ -736,76 +653,31 @@ const handleUninstall = async (plugin) => {
 
 .btn-danger:hover {
     background: #fee2e2;
-    color: #dc2626;
 }
 
 .btn-disabled {
-    border: none;
     background: #f1f5f9;
     color: #94a3b8;
-    padding: 8px 16px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 700;
     cursor: not-allowed;
-}
-
-.btn-primary.is-loading {
-    background: #93c5fd;
-    cursor: wait;
-    box-shadow: none;
 }
 
 .spin-icon {
     animation: spin 1s linear infinite;
 }
 
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    background: #ffffff;
-    border-radius: 20px;
-    border: 1px dashed #cbd5e1;
-    margin-top: 20px;
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
-.empty-icon {
-    color: #cbd5e1;
-    margin-bottom: 16px;
-    display: flex;
-    justify-content: center;
-}
-
-.empty-state h3 {
-    font-size: 18px;
-    color: #1e293b;
-    margin: 0 0 8px 0;
-}
-
-.empty-state p {
-    color: #64748b;
-    font-size: 14px;
-    margin: 0 0 24px 0;
-}
-
-.reset-filter-btn {
-    background: #f1f5f9;
-    color: #475569;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.reset-filter-btn:hover {
-    background: #e2e8f0;
-    color: #0f172a;
-}
-
-/* 移动端响应式处理 */
+/* ==========================================
+   6. 响应式适配
+   ========================================== */
 @media (max-width: 768px) {
     .page-header {
         flex-direction: column;
@@ -817,15 +689,6 @@ const handleUninstall = async (plugin) => {
         width: 100%;
     }
 
-    .node-selector-wrapper {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .node-hint {
-        padding-right: 0;
-    }
-
     .filter-bar {
         flex-direction: column;
     }
@@ -834,7 +697,7 @@ const handleUninstall = async (plugin) => {
         width: 100%;
     }
 
-    .filter-select {
+    :deep(.filter-select) {
         width: 100% !important;
     }
 }
