@@ -34,7 +34,7 @@
 
                 <div class="card-head">
                     <div class="p-icon">
-                        <img v-if="plugin.icon" :src="plugin.icon" :alt="plugin.name" class="plugin-img" />
+                        <img v-if="plugin.icon" :src="plugin.icon" :alt="plugin.name" class="plugin-img" @error="iconError" />
                         <span v-else class="fallback-icon">{{ plugin.name.charAt(0).toUpperCase() }}</span>
                     </div>
 
@@ -278,6 +278,11 @@ const startPolling = (pluginName, taskId) => {
         }
     }, 1000);
 };
+
+function iconError(e){
+    e.srcElement.src = 'https://s41.ax1x.com/2026/03/24/peKWzGR.webp';
+    e.srcElement.onerror = null;
+}
 
 // 辅助清理函数
 const stopAndCleanup = (name) => {
