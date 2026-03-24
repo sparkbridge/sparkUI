@@ -6,7 +6,7 @@
                 <p>探索并安装由社区与官方提供的 SparkBridge3 扩展功能</p>
             </div>
 
-            <div class="node-selector-container">
+            <!-- <div class="node-selector-container">
                 <div class="node-selector-wrapper">
                     <div class="node-label">
                         <GlobeIcon :size="16" class="node-icon" />
@@ -15,7 +15,7 @@
                     <UiSelect v-model="selectedProxy" :options="proxyOptions" width="240px" />
                 </div>
                 <p class="node-hint">提示：仅对 GitHub 来源生效，直链将自动忽略并直连</p>
-            </div>
+            </div> -->
         </div>
 
         <div class="filter-bar">
