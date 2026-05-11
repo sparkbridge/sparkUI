@@ -79,8 +79,10 @@
                         <div v-if="rule.conditions.length === 0" class="empty-tip">无条件限制，触发即执行</div>
                         <div class="list-rows">
                             <div v-for="(cond, cIdx) in rule.conditions" :key="cond.id" class="list-row">
-                                <UiSelect v-model="cond.field" :options="fieldOptions" width="110px" />
-                                <UiSelect v-model="cond.operator" :options="operatorOptions" width="90px" />
+                                <UiSelect v-model="cond.field" :options="fieldOptions" width="auto"
+                                    style="flex: 1.2;" />
+                                <UiSelect v-model="cond.operator" :options="operatorOptions" width="auto"
+                                    style="flex: 1;" />
 
                                 <input type="text" v-model="cond.value" class="ui-input" placeholder="比较值..." />
                                 <button class="btn-del-small" @click="rule.conditions.splice(cIdx, 1)">
@@ -102,7 +104,7 @@
                         <div v-if="rule.actions.length === 0" class="empty-tip">未配置任何执行动作</div>
                         <div class="list-rows">
                             <div v-for="(act, aIdx) in rule.actions" :key="act.id" class="list-row">
-                                <UiSelect v-model="act.type" :options="actionOptions" width="130px" />
+                                <UiSelect v-model="act.type" :options="actionOptions" width="auto" style="flex: 1;" />
 
                                 <input type="text" v-model="act.params" class="ui-input" placeholder="参数 (支持内置变量)..." />
                                 <button class="btn-del-small" @click="rule.actions.splice(aIdx, 1)">
@@ -126,13 +128,12 @@
 </template>
 
 <script setup>
-import { ref,onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import {
     Settings2Icon, PlusIcon, Trash2Icon, TextCursorInputIcon,
     FilterIcon, ZapIcon, XIcon, SaveIcon, MessageSquareIcon, BellIcon, BellRingIcon
 } from 'lucide-vue-next';
 import { api } from '../api';
-// 引入我们刚刚封装好的完美下拉框组件
 import UiSelect from '../components/UiSelect.vue';
 import { showNotice } from '../utils/notice';
 
@@ -143,12 +144,10 @@ import { showNotice } from '../utils/notice';
 const eventOptions = [
     { label: '🟢 群成员增加 (进群/被邀请)', value: 'group.member_join' },
     { label: '🔴 群成员减少 (退群/被踢)', value: 'group.member_leave' },
-    // { label: '🛡️ 管理员变更 (升管/降管)', value: 'group.admin_change' },
-    // { label: '👋 好友添加请求', value: 'request.friend' },
     { label: '⚙️ 机器人生命周期 (上线)', value: 'system.lifecycle' },
-    {label: '💬 服务器玩家发言', value: 'server.player_chat'},
-    {label: '🏃‍ 玩家进入服务器',value:'server.player_join'},
-    {label: '🏃‍ 玩家退出服务器',value:'server.player_quit'},
+    { label: '💬 服务器玩家发言', value: 'server.player_chat' },
+    { label: '🏃‍ 玩家进入服务器', value: 'server.player_join' },
+    { label: '🏃‍ 玩家退出服务器', value: 'server.player_quit' },
 ];
 
 const fieldOptions = [
@@ -168,10 +167,9 @@ const actionOptions = [
     { label: '发送图片', value: 'replyImage' },
     { label: '撤回消息', value: 'deleteMessage' },
     { label: '禁言用户', value: 'muteUser' },
-    {label:'执行命令', value:'executeCommand'},
-    {label:'调用插件命令', value:'callPluginCommand'}
+    { label: '执行命令', value: 'executeCommand' },
+    { label: '调用插件命令', value: 'callPluginCommand' }
 ];
-
 
 // ==============================
 // 2. 页面状态与逻辑
@@ -179,11 +177,10 @@ const actionOptions = [
 
 const rules = ref([]);
 const isSaving = ref(false);
+
 const loadRules = async () => {
     try {
         const res = await api.getRegexRules();
-        // console.log('获取到的数据:', res.data);
-        // 赋值给 .value
         rules.value = res.data;
     } catch (error) {
         console.error('获取规则失败:', error);
@@ -194,7 +191,6 @@ const loadRules = async () => {
 onMounted(() => {
     loadRules();
 });
-
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -209,37 +205,26 @@ const deleteRule = (index) => rules.value.splice(index, 1);
 const addCondition = (rule) => rule.conditions.push({ id: generateId(), field: 'groupId', operator: '==', value: '' });
 const addAction = (rule) => rule.actions.push({ id: generateId(), type: 'replyText', params: '' });
 
-// 优雅的保存方法
 const saveRules = async () => {
-    // 1. 防连点拦截
     if (isSaving.value) return;
-
-    // 2. 开启 Loading 状态
     isSaving.value = true;
-
     try {
-        // 3. 调用 API，注意传入的是 rules.value
-        // Axios 内部会自动调用 JSON.stringify 处理 Vue 的响应式 Proxy 对象
         const res = await api.saveRegexRules(rules.value);
-
-        // 4. 判断业务成功（如果你的拦截器没有抛出异常，通常就是成功了）
         if (res && res.code === 200) {
-            // showNotice('规则配置保存成功！', 'success');
-            showNotice('规则配置保存成功！',"success"); // 如果还没写 showNotice，先用 alert 代替
+            showNotice('规则配置保存成功！', "success");
         }
     } catch (error) {
-        // 错误通常已经在你的 request.js 拦截器里处理并弹窗了
-        // 这里只需打印一下日志方便调试
         console.error('保存规则失败:', error);
     } finally {
-        // 5. 无论成功还是失败，最后一定要解除 Loading 锁
         isSaving.value = false;
     }
 };
 </script>
 
 <style scoped>
-/* 基础与动画样式同前 */
+/* ==========================================
+   基础与动画
+   ========================================== */
 .regex-engine-view {
     display: flex;
     flex-direction: column;
@@ -260,6 +245,9 @@ const saveRules = async () => {
     }
 }
 
+/* ==========================================
+   页面 Header
+   ========================================== */
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -335,6 +323,9 @@ button {
     color: #ef4444;
 }
 
+/* ==========================================
+   规则列表 & 卡片
+   ========================================== */
 .rule-list {
     display: flex;
     flex-direction: column;
@@ -355,7 +346,7 @@ button {
     filter: grayscale(0.8);
 }
 
-/* --- 新增：规则头部排版优化 --- */
+/* --- 规则卡片头部 (包含各种抗压缩保护) --- */
 .rule-header {
     display: flex;
     justify-content: space-between;
@@ -368,7 +359,9 @@ button {
 .header-left-controls {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
+    flex-shrink: 0;
+    /* 保护左侧不被压缩 */
 }
 
 .header-right-controls {
@@ -376,14 +369,21 @@ button {
     align-items: center;
     gap: 12px;
     flex: 1;
+    min-width: 0;
+    /* 允许右侧收缩 */
     justify-content: flex-end;
 }
 
 .switch-ui {
     position: relative;
     width: 44px;
+    min-width: 44px;
+    /* 强制最小宽 */
     height: 24px;
     cursor: pointer;
+    flex-shrink: 0;
+    /* 绝对禁止变形 */
+    display: block;
 }
 
 .switch-ui input {
@@ -420,12 +420,13 @@ input:checked+.slider:before {
     transform: translateX(20px);
 }
 
-/* --- 新增：触发器类型切换药丸 (Pill Toggle) --- */
 .type-toggle {
     display: flex;
     background: #f1f5f9;
     border-radius: 10px;
     padding: 4px;
+    flex-shrink: 0;
+    /* 绝对禁止变形 */
 }
 
 .type-toggle button {
@@ -458,7 +459,10 @@ input:checked+.slider:before {
     border: none;
     outline: none;
     background: transparent;
-    width: 200px;
+    min-width: 80px;
+    flex: 1;
+    max-width: 300px;
+    /* 限制输入框大小，避免破坏布局 */
     text-align: right;
     padding: 6px 12px;
     border-radius: 8px;
@@ -469,7 +473,9 @@ input:checked+.slider:before {
     background: #f8fafc;
 }
 
-/* 区块通用 */
+/* ==========================================
+   区块通用样式 & 正则/事件块
+   ========================================== */
 .section-block {
     background: #f8fafc;
     border-radius: 16px;
@@ -508,7 +514,6 @@ input:checked+.slider:before {
     background: #eff6ff;
 }
 
-/* 正则与事件选择器 */
 .regex-input-group {
     display: flex;
     align-items: center;
@@ -554,7 +559,6 @@ input:checked+.slider:before {
     text-align: center;
 }
 
-/* --- 新增：事件专属区块样式 --- */
 .event-block {
     background: #fdf4ff;
     border-color: #fae8ff;
@@ -564,18 +568,9 @@ input:checked+.slider:before {
     color: #c026d3;
 }
 
-.full-width-select {
-    width: 100%;
-    padding: 12px;
-    border-radius: 12px;
-    background: white;
-    border: 1px solid #f0abfc;
-    color: #a21caf;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-/* 左右分栏 */
+/* ==========================================
+   左右分栏 (条件与动作)
+   ========================================== */
 .split-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -599,7 +594,7 @@ input:checked+.slider:before {
     color: #3b82f6;
 }
 
-/* 动态列表行 */
+/* 列表行 */
 .empty-tip {
     font-size: 12px;
     color: #94a3b8;
@@ -620,73 +615,6 @@ input:checked+.slider:before {
     align-items: center;
 }
 
-.ui-select {
-    /* 1. 清除浏览器原生样式 */
-    appearance: none;
-    -webkit-appearance: none;
-
-    /* 2. 基础拟态背景与圆角 */
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-
-    /* 3. 自定义下拉箭头 (使用 Data URI 嵌入 SVG，纯粹且不发请求) */
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 14px;
-
-    /* 4. 排版与间距 (右侧 padding 给箭头留出空间) */
-    padding: 8px 32px 8px 12px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #334155;
-    outline: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-/* 悬浮状态：提亮背景，加深边框 */
-.ui-select:hover {
-    background-color: #ffffff;
-    border-color: #cbd5e1;
-}
-
-/* 聚焦/激活状态：融入主题蓝，增加呼吸光环 */
-.ui-select:focus {
-    background-color: #ffffff;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.op-select {
-    width: 80px;
-}
-
-.action-select {
-    width: 120px;
-    font-weight: 600;
-    color: #3b82f6;
-}
-
-.full-width-select {
-    width: 100%;
-    padding: 12px 16px;
-    border-radius: 12px;
-    background-color: #fdf4ff;
-    border: 1px solid #f0abfc;
-    color: #a21caf;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.full-width-select:focus {
-    border-color: #d946ef;
-    box-shadow: 0 0 0 3px rgba(217, 70, 239, 0.15);
-}
-
 .ui-input {
     flex: 1;
     min-width: 0;
@@ -696,10 +624,14 @@ input:checked+.slider:before {
     padding: 8px 12px;
     font-size: 12px;
     outline: none;
+    transition: 0.2s;
 }
 
-.ui-input:focus
-
+.ui-input:focus {
+    background: #fff;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
 
 .btn-del-small {
     width: 28px;
@@ -711,6 +643,8 @@ input:checked+.slider:before {
     place-items: center;
     border: 1px solid #e2e8f0;
     flex-shrink: 0;
+    cursor: pointer;
+    transition: 0.2s;
 }
 
 .btn-del-small:hover {
@@ -719,7 +653,9 @@ input:checked+.slider:before {
     background: #fef2f2;
 }
 
-/* 底部操作条 */
+/* ==========================================
+   底部动作条
+   ========================================== */
 .bottom-action-bar {
     position: fixed;
     bottom: 0;
@@ -759,6 +695,9 @@ input:checked+.slider:before {
     transform: translateY(-2px);
 }
 
+/* ==========================================
+   ⭐ 移动端深度适配 (Media Queries)
+   ========================================== */
 @media (max-width: 1024px) {
     .split-grid {
         grid-template-columns: 1fr;
@@ -766,6 +705,108 @@ input:checked+.slider:before {
 
     .bottom-action-bar {
         width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        padding: 20px;
+    }
+
+    .add-rule-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* 规则头上下排列 */
+    .rule-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .header-right-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .name-input {
+        text-align: left;
+        width: 100%;
+        max-width: none;
+        background: #f8fafc;
+    }
+
+    .bottom-action-bar {
+        padding: 12px 20px;
+        left: 0;
+    }
+}
+
+@media (max-width: 480px) {
+
+    /* 1. 核心修复：允许左侧控制区在极限状态下换行 */
+    .header-left-controls {
+        width: 100%;
+        flex-wrap: wrap;
+        /* 空间不足时自动掉到下一行 */
+        justify-content: flex-start;
+        gap: 12px;
+    }
+
+    /* 2. 修复切换按钮：弹性收缩，极限宽度下自动换行 */
+    .type-toggle {
+        flex: 1 1 200px;
+        /* 允许放大和缩小，当空间小于200px时自动换行 */
+        width: 100%;
+        margin: 0;
+    }
+
+    /* 3. 按钮内部微调：防止极端小屏下文字撑爆 */
+    .type-toggle button {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 4px;
+        font-size: 11px;
+        /* 字体稍微缩小，防止小屏挤压文字 */
+    }
+
+    /* 以下保留之前的手机端适配逻辑 */
+    .list-row {
+        flex-wrap: wrap;
+        background: #f8fafc;
+        padding: 12px;
+        border-radius: 12px;
+        position: relative;
+        gap: 10px;
+    }
+
+    :deep(.custom-select) {
+        flex: 1 1 calc(50% - 10px) !important;
+        min-width: 120px;
+    }
+
+    .ui-input {
+        width: 100%;
+        order: 3;
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    .btn-del-small {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: white;
+    }
+
+    .regex-pattern {
+        padding: 10px 4px;
+        font-size: 13px;
     }
 }
 </style>
