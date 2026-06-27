@@ -1,7 +1,7 @@
 <template>
     <teleport to="body">
         <transition name="modal-fade">
-            <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
+            <div v-if="isOpen" class="modal-overlay">
                 <div class="modal-card">
                     <header class="modal-header">
                         <div class="header-title">
@@ -20,7 +20,7 @@
 
                     <div class="modal-body">
                         <div v-for="item in schema.items" :key="item.key" class="config-row"
-                            :class="{ 'align-start': item.type === 'editArray' }">
+                            :class="{ 'align-start': item.type === 'editArray' || item.type === 'text' }">
                             <div class="field-meta">
                                 <span class="field-label">{{ item.desc }}</span>
                                 <code class="field-key">{{ item.key }}</code>
@@ -64,6 +64,9 @@
                                     </label>
                                 </div>
 
+                                <textarea v-else-if="item.type === 'text'" v-model="formData[item.key]" class="text-input textarea-input"
+                                    placeholder="请输入内容..."></textarea>
+
                                 <input v-else type="text" v-model="formData[item.key]" class="text-input"
                                     placeholder="请输入内容..." />
 
@@ -97,15 +100,13 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save']);
 
 const formData = ref({});
-const newInputs = reactive({}); // 存储各个数组输入框的临时文字
+const newInputs = reactive({}); 
 
-// 弹窗打开时初始化数据
 watch(() => props.isOpen, (val) => {
     if (val && props.schema?.items) {
         const data = {};
         props.schema.items.forEach(i => {
             if (i.type === 'editArray') {
-                // 关键修复：从 i.val 读取初始数组
                 data[i.key] = Array.isArray(i.val) ? [...i.val] : [];
                 newInputs[i.key] = '';
             } else {
@@ -116,23 +117,19 @@ watch(() => props.isOpen, (val) => {
     }
 });
 
-// 数组添加逻辑
 const addItem = (key) => {
     const text = newInputs[key]?.trim();
     if (text) {
         const currentList = Array.isArray(formData.value[key]) ? formData.value[key] : [];
-        // 关键修复：通过展开运算符创建新数组，强制触发 Vue 响应式更新
         formData.value[key] = [...currentList, text];
         newInputs[key] = '';
     }
 };
 
-// 数组删除逻辑
 const removeItem = (key, index) => {
     formData.value[key].splice(index, 1);
 };
 
-// 提交逻辑
 const handleSave = () => {
     console.log('formData.value:', formData.value);
     emit('save', { ...formData.value });
@@ -338,7 +335,7 @@ button {
     flex-shrink: 0;
 }
 
-/* 5. 核心修复：单选框去圆点 */
+/* 5. 单选框样式 */
 .segmented-control {
     display: flex;
     flex-wrap: wrap;
@@ -360,7 +357,6 @@ button {
     display: none;
 }
 
-/* 彻底隐藏原生单选框 */
 .segment-label {
     display: block;
     padding: 6px 14px;
@@ -378,7 +374,7 @@ button {
     box-shadow: 0 2px 6px rgba(59, 130, 246, 0.1);
 }
 
-/* 6. 核心修复：开关防变形 */
+/* 6. 开关组件样式 */
 .switch-wrapper {
     flex-shrink: 0;
     width: 44px;
@@ -427,7 +423,7 @@ input:checked+.slider:before {
     transform: translateX(22px);
 }
 
-/* 7. 基础控件样式 */
+/* 7. 基础单行控件样式 */
 .text-input {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -436,11 +432,22 @@ input:checked+.slider:before {
     font-size: 13px;
     width: 220px;
     outline: none;
+    transition: 0.2s;
 }
 
 .text-input:focus {
     border-color: #3b82f6;
     background: white;
+}
+
+/* 多行文本框（大文本）专属样式 */
+.textarea-input {
+    resize: vertical; 
+    min-height: 70px;
+    font-family: inherit;
+    line-height: 1.5;
+    word-break: break-all; 
+    white-space: pre-wrap; 
 }
 
 .modal-footer {
@@ -465,7 +472,7 @@ input:checked+.slider:before {
     padding: 12px 24px;
 }
 
-/* 8. 响应式布局补丁 (移动端堆叠) */
+/* 8. 响应式布局补丁 */
 @media (max-width: 640px) {
     .modal-card {
         width: 95%;
